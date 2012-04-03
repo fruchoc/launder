@@ -36,35 +36,32 @@ class LaunderApp:
         
         # Create the key widgets
         self.m_toolbar = Toolbar()
-        self.m_mpl     = ContainerMPL()
+        self.makeMPLVBox()
         
         # Create main vbox for toolbar
         self.m_toolbar_vbox  = gtk.VBox(homogeneous=False)
         self.m_toolbar_vbox.pack_start(self.m_toolbar.vbox, expand=False)
-        self.m_toolbar_vbox.pack_start(self.m_mpl.vbox)
+        self.m_toolbar_vbox.pack_start(self.m_mpl_vbox)
         self.m_window_main.add(self.m_toolbar_vbox)
         
         self.m_window_main.show_all()
     
+    def makeMPLVBox(self):        
+        # Create the figure
+        self.m_mpl_fig = Figure(figsize=(5,4), dpi=100)
+        self.m_mpl_ax = self.m_mpl_fig.add_subplot(111)
+        self.m_mpl_canvas = FigureCanvas(self.m_mpl_fig)
+        # Create the toolbar
+        self.m_mpl_toolbar = NavToolbar(self.m_mpl_canvas, self.m_window_main)
+        
+        # Put everything in a vbox!
+        self.m_mpl_vbox = gtk.VBox()
+        self.m_mpl_vbox.pack_start(self.m_mpl_canvas)
+        self.m_mpl_vbox.pack_start(self.m_mpl_toolbar, expand=False, fill=False)
     
     def main(self):
         gtk.main()
-
-# Definition of a container for a matplotlib widget
-class ContainerMPL:
-    def __init__(self):
-        # Create vbox and add to window
-        self.vbox = gtk.VBox()
         
-        # Create figure and add to vbox
-        self.fig = Figure(figsize=(5,4), dpi=100)
-        self.ax = self.fig.add_subplot(111)
-        self.canvas = FigureCanvas(self.fig)
-        self.vbox.pack_start(self.canvas)
-        
-        # Create the nav toolbar and add to vbox
-        self.toolbar = NavToolbar(self.canvas, self.vbox)
-        self.vbox.pack_start(self.toolbar, expand=False, fill=False)
 
 # Definition of the program toobar widget
 class Toolbar:
