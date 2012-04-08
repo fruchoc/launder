@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys
+import glob
 
 # Import pygtk and gtk packages.
 # obtain for any platform at http://www.pygtk.org
@@ -38,10 +39,16 @@ class LaunderApp:
         self.m_toolbar = Toolbar()
         self.makeMPLVBox()
         
+        # Create a hbox to hold the control panel and mpl
+        self.m_hbox_main = gtk.HBox(homogeneous=False)
+        self.makeControlPanel()
+        self.m_hbox_main.pack_start(self.m_cp_vbox, expand=False)
+        self.m_hbox_main.pack_start(self.m_mpl_vbox)
+                
         # Create main vbox for toolbar
         self.m_toolbar_vbox  = gtk.VBox(homogeneous=False)
         self.m_toolbar_vbox.pack_start(self.m_toolbar.vbox, expand=False)
-        self.m_toolbar_vbox.pack_start(self.m_mpl_vbox)
+        self.m_toolbar_vbox.pack_start(self.m_hbox_main)
         self.m_window_main.add(self.m_toolbar_vbox)
         
         self.m_window_main.show_all()
@@ -58,6 +65,31 @@ class LaunderApp:
         self.m_mpl_vbox = gtk.VBox()
         self.m_mpl_vbox.pack_start(self.m_mpl_canvas)
         self.m_mpl_vbox.pack_start(self.m_mpl_toolbar, expand=False, fill=False)
+    
+    def makeControlPanel(self):
+        self.m_cp_vbox = gtk.VBox()
+        self.m_cp_vbox.set_border_width(10)
+        
+        # Create the frame for filepath info
+        m_fpath_frame = gtk.Frame()
+        m_fpath_vbox  = gtk.VBox(homogeneous=False)
+        m_fpath_frame.add(m_fpath_vbox)
+        m_fpath_frame.set_label("Simulation info")
+        m_fpath_frame.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
+        m_fpath_frame.set_label_align(1.0, 0.0)
+        
+        # Create the label and add to vbox
+        label = gtk.Label("File path")
+        m_fpath_vbox.pack_start(label)
+        
+        # Create the filepath entry box
+        self.m_fpath_entry = gtk.Entry()
+        self.m_fpath_entry.set_max_length(30)
+        self.m_fpath_entry.set_editable(False)
+        m_fpath_vbox.pack_start(self.m_fpath_entry)
+        
+        self.m_cp_vbox.pack_start(m_fpath_frame, expand=False)
+    
     
     def main(self):
         gtk.main()
@@ -121,6 +153,9 @@ class Toolbar:
             print 'Closed, no files selected'
         self.m_selected_file = fname
         dialog.destroy()
+
+
+
 
 if __name__ == "__main__":
     app = LaunderApp()
