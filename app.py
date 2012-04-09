@@ -2,6 +2,7 @@
 
 import sys
 import glob
+import re
 
 # Import pygtk and gtk packages.
 # obtain for any platform at http://www.pygtk.org
@@ -193,14 +194,27 @@ class ControlPane:
     def loadSelectedFile(self, widget):
         # Loads the selected file on the TreeView
         selection = self.m_file_tree_view.get_selection().get_selected()
-        fname = selection[0].get_value(selection[1], 0)
-        print("Loading file {0}.".format(fname))
+        if selection[1] == None:
+            print("Nothing selected!")
+            return None
+        else:
+            fname = selection[0].get_value(selection[1], 0)
         
-        dialog = LoadCSVDialog(fname)
+        filetype = self.checkForKnownFile(fname)
+        print("Loading file {0}.".format(fname))
+        if filetype < 0:
+            print("Unknown file! Aborting.")
+            return None
+        else:
+            dialog = LoadCSVDialog(fname, filetype)
     
     def checkForKnownFile(self, fname):
         # Checks that the filename is of a known type, returns the type
-        print "blah"
+        if re.search("-psl", fname): return self.m_types.f_psl
+        elif re.search("-chem.csv", fname): return self.m_types.f_chem
+        elif re.search("-part-rates.csv", fname): return self.m_types.f_rates
+        elif re.search("-part.csv", fname): return self.m_types.f_part
+        else: return -1
     
     def findFiles(self, searchtext):
         # Helper function to search for searchtext, and return lists of files
@@ -216,20 +230,35 @@ class LoadCSVDialog:
     def destroy(self, widget, data=None):
         self.m_window.destroy()
     
-    def __init__(self, fname):
+    def __init__(self, fname, filetype):
         self.m_fname = fname    # Name of file to load
+        self.m_ftype = filetype # Type of file to load
+        self.m_types = LaunderTypes()
         
         # Initialise a new window
         self.m_window = gtk.Window()
         self.m_window.connect("destroy", self.destroy)
         self.m_window.set_default_size(300,300)
-        self.m_window.set_title("Load series for file..")
+        self.m_window.set_title("Load {0}".format(self.m_fname))
         
+        # Initialise the main VBox for the system
+        self.m_vbox = gtk.VBox(homogeneous=False)
+        self.m_window.add(self.m_vbox)
         
+        # Initialise a HBox and the buttons
+        self.m_b_hbox          = gtk.HBox(homogeneous=True)
+        self.m_b_load_selected = gtk.Button("Load selected")
+        self.m_b_load_all      = gtk.Button("Load all")
+        self.m_b_hbox.pack_start(self.m_b_load_selected, expand=False, padding=5)
+        self.m_b_hbox.pack_start(self.m_b_load_all, expand=False, padding=5)
+        self.m_vbox.pack_start(self.m_b_hbox, fill=False)
         
         # Show window
         self.m_window.show_all()
-        
+    
+    def makeTreeView(self):
+        # Makes the list view showing all series in the file
+        print("lknsa")
 
 class LaunderTypes:
 # Enum-like class to hold various constants
