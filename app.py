@@ -28,6 +28,7 @@ except:
 
 class App:
     def __init__(self):
+        
         # Create main window
         self.m_window_main = gtk.Window()
         
@@ -38,7 +39,11 @@ class App:
         
         # Create main vbox to hold toolbar and everything else
         self.m_vbox_main = gtk.VBox(homogeneous=False)
-        self.m_window_main.add(self.m_vbox_main)
+        
+        # Create a hbox for some padding
+        self.m_hbox_main = gtk.HBox(homogeneous=False)
+        self.m_hbox_main.pack_start(self.m_vbox_main, padding=10)
+        self.m_window_main.add(self.m_hbox_main)
         
         # Add the control pane
         self.m_control_pane = ControlPane()
@@ -57,7 +62,7 @@ class ControlPane:
         # Initialise empty variables
         self.m_auto_files = []
         self.m_selected_files = []
-        
+        self.m_types = LaunderTypes()
         
         # Create main vbox for control pane
         self.m_vbox = gtk.VBox(homogeneous=False)
@@ -193,6 +198,10 @@ class ControlPane:
         
         dialog = LoadCSVDialog(fname)
     
+    def checkForKnownFile(self, fname):
+        # Checks that the filename is of a known type, returns the type
+        print "blah"
+    
     def findFiles(self, searchtext):
         # Helper function to search for searchtext, and return lists of files
         # Need for filename matching
@@ -222,6 +231,12 @@ class LoadCSVDialog:
         self.m_window.show_all()
         
 
+class LaunderTypes:
+# Enum-like class to hold various constants
+    f_psl    = 0
+    f_rates  = 1
+    f_chem   = 2
+    f_part   = 3
 
 if __name__ == "__main__":
     app = App()
