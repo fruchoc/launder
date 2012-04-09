@@ -33,7 +33,7 @@ class App:
         
         # Initialise and connect signals
         self.m_window_main.connect("destroy", gtk.main_quit)
-        self.m_window_main.set_default_size(600,300)
+        self.m_window_main.set_default_size(300,600)
         self.m_window_main.set_title("Launder GTK+")
         
         # Create main vbox to hold toolbar and everything else
@@ -88,10 +88,18 @@ class ControlPane:
         # Add toolbar to pane's vbox
         self.m_vbox.pack_start(self.m_toolbar, fill=False, expand=False)
         
+        # Create the frame for filepath info
+        file_frame = gtk.Frame()
+        file_frame.set_label("Simulation info")
+        file_frame.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
+        file_vbox = gtk.VBox(homogeneous=False)
+        
         # Add the file list pane
         label = gtk.Label("Available files")
         label.set_justify(gtk.JUSTIFY_LEFT)
-        self.m_vbox.pack_start(label, fill=False, expand=False)
+        file_vbox.pack_start(label, fill=False, expand=False)
+        file_frame.add(file_vbox)
+        self.m_vbox.pack_start(file_frame)
         
         # Set up the file tree view
         self.m_file_tree_store = gtk.TreeStore(str)
@@ -103,12 +111,12 @@ class ControlPane:
         cell  = gtk.CellRendererText()
         self.m_file_tree_col.pack_start(cell, True)
         self.m_file_tree_col.add_attribute(cell, 'text', 0)
-        self.m_vbox.pack_start(self.m_file_tree_view)
+        file_vbox.pack_start(self.m_file_tree_view, padding=5)
         
         # Add buttons
         self.m_button_loadfile = gtk.Button("Load selected")
         self.m_button_loadfile.connect("clicked",self.loadSelectedFile)
-        self.m_vbox.pack_start(self.m_button_loadfile, expand=False)
+        file_vbox.pack_start(self.m_button_loadfile, expand=False)
     
     def chooseFile(self, data=None):
         # Check PyGTK version
@@ -175,15 +183,15 @@ class ControlPane:
         elif flag == "auto":
             filelist = self.m_auto_files
         for fname in filelist:
-            print fname
             self.m_file_tree_store.append(None, [fname])
         
     def loadSelectedFile(self, widget):
         # Loads the selected file on the TreeView
-        print("Loading file.")
         selection = self.m_file_tree_view.get_selection().get_selected()
         fname = selection[0].get_value(selection[1], 0)
+        print("Loading file {0}.".format(fname))
         
+        dialog = LoadCSVDialog(fname)
     
     def findFiles(self, searchtext):
         # Helper function to search for searchtext, and return lists of files
@@ -197,16 +205,23 @@ class ControlPane:
 class LoadCSVDialog:
     # Class for loading relevant MOPS csv files into the system.
     def destroy(self, widget, data=None):
-        self.destroy()
+        self.m_window.destroy()
     
     def __init__(self, fname):
         self.m_fname = fname    # Name of file to load
         
         # Initialise a new window
         self.m_window = gtk.Window()
-        self.m_window_main.connect("destroy", self.destroy)
-        self.m_window_main.set_default_size(600,300)
-        self.m_window_main.set_title("Launder GTK+")
+        self.m_window.connect("destroy", self.destroy)
+        self.m_window.set_default_size(300,300)
+        self.m_window.set_title("Load series for file..")
+        
+        
+        
+        # Show window
+        self.m_window.show_all()
+        
+
 
 if __name__ == "__main__":
     app = App()
