@@ -264,6 +264,7 @@ class LoadCSVDialog:
         self.m_b_load_selected = gtk.Button("Load selected")
         self.m_b_load_selected.connect("clicked", self.getSelectedTrajectories, )
         self.m_b_load_all      = gtk.Button("Load all")
+        self.m_b_load_all.connect("clicked", self.getAllTrajectories, )
         self.m_b_hbox.pack_start(self.m_b_load_selected, expand=False, padding=5)
         self.m_b_hbox.pack_start(self.m_b_load_all, expand=False, padding=5)
         self.m_vbox.pack_start(self.m_b_hbox, fill=False, padding=5)
@@ -275,42 +276,57 @@ class LoadCSVDialog:
         # Makes the list view showing all series in the file
         headerparser = MParser.HeaderParser(self.m_fname)
         data = headerparser.getHeaders()
-        
-        # Create the list store
-        self.m_l_store = gtk.ListStore(type("str"))
-        for item in data:
-            self.m_l_store.append((item,))
-
-        self.m_l_view = gtk.TreeView()
-        self.m_l_view.set_model(self.m_l_store)
-        
-        col  = gtk.TreeViewColumn()
-        cell = gtk.CellRendererText()
-        col.pack_start(cell)
-        col.add_attribute(cell, "text", 0)
-        self.m_l_view.append_column(col)
-        
-        # Turn off headers
-        self.m_l_view.set_headers_visible(False)
-        self.m_l_view.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
-
-        
-        # Create the scrolled view
-        scroller = gtk.ScrolledWindow()
-        scroller.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
-        scroller.set_shadow_type(gtk.SHADOW_IN)
-        scroller.add_with_viewport(self.m_l_view)
-        
-        self.m_vbox.pack_start(scroller, expand=True, fill=True)
+        if (data == None):
+            print("No data found in file.")
+            self.destroy(None, None)
+        else:
+            
+            # Create the list store
+            self.m_l_store = gtk.ListStore(type("str"))
+            for item in data:
+                self.m_l_store.append((item,))
+    
+            self.m_l_view = gtk.TreeView()
+            self.m_l_view.set_model(self.m_l_store)
+            
+            col  = gtk.TreeViewColumn()
+            cell = gtk.CellRendererText()
+            col.pack_start(cell)
+            col.add_attribute(cell, "text", 0)
+            self.m_l_view.append_column(col)
+            
+            # Turn off headers
+            self.m_l_view.set_headers_visible(False)
+            self.m_l_view.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
+    
+            
+            # Create the scrolled view
+            scroller = gtk.ScrolledWindow()
+            scroller.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
+            scroller.set_shadow_type(gtk.SHADOW_IN)
+            scroller.add_with_viewport(self.m_l_view)
+            
+            self.m_vbox.pack_start(scroller, expand=True, fill=True)
     
     def getSelectedTrajectories(self, widget, data=None):
+        # Returns a list of the indicies of the trajectories of interest
+        
+        # Initialise blank array
+        indices = []
         
         selection = self.m_l_view.get_selection()
-        (model, pathlist) = selection.get_selected_rows()
-        print model
-        print pathlist
+        if selection != None:
+            (model, pathlist) = selection.get_selected_rows()
+        
+            for path in pathlist:
+                indices.append(path[0])
+        else:
+            print("Nothing selected!") 
     
-    
+    def getAllTrajectories(self, widget, data=None):   
+        indices = range(0, len(self.m_l_store))
+        print indices
+        
     def main(self):
         gtk.main()
         
@@ -322,8 +338,8 @@ class LaunderTypes:
     f_part   = 3
 
 if __name__ == "__main__":
-    #app = App()
-    app = LoadCSVDialog("silica-fm-part.csv", LaunderTypes().f_part)
+    app = App()
+    #app = LoadCSVDialog("silica-fm-part.csv", LaunderTypes().f_part)
     app.main()
     
 
