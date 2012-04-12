@@ -25,7 +25,14 @@ try:
 except:
     print("Couldn't find matplotlib dependencies.")
     sys.exit(2)
-    
+
+# Import data model files
+try:
+    import datamodel.mops_trajectory as MTrj
+    import datamodel.mops_parser as MParser
+except:
+    print("Couldn't find data model files!")
+    sys.exit(4)
 
 class App:
     def __init__(self):
@@ -177,9 +184,6 @@ class ControlPane:
             print("No files found.")
         else:
             self.m_auto_files = filelist
-            print("Found the following files:")
-            for f in filelist:
-                print f
     
     def appendFilesToTreeView(self, widget, flag):
         # Given a list of filename, add this to the treeview
@@ -201,7 +205,6 @@ class ControlPane:
             fname = selection[0].get_value(selection[1], 0)
         
         filetype = self.checkForKnownFile(fname)
-        print("Loading file {0}.".format(fname))
         if filetype < 0:
             print("Unknown file! Aborting.")
             return None
@@ -241,25 +244,76 @@ class LoadCSVDialog:
         self.m_window.set_default_size(300,300)
         self.m_window.set_title("Load {0}".format(self.m_fname))
         
+        # Initialise a HBox for some padding
+        self.m_hbox = gtk.HBox(homogeneous=False)
+        self.m_window.add(self.m_hbox)
+        
         # Initialise the main VBox for the system
         self.m_vbox = gtk.VBox(homogeneous=False)
-        self.m_window.add(self.m_vbox)
+        self.m_hbox.pack_start(self.m_vbox, padding=5)
+        
+        # Add some text explaining what to do
+        label1 = gtk.Label("Select the trajectories to load.")
+        self.m_vbox.pack_start(label1, padding=5)
+        
+        # Generate the of trajectories
+        self.makeTreeView()
         
         # Initialise a HBox and the buttons
         self.m_b_hbox          = gtk.HBox(homogeneous=True)
         self.m_b_load_selected = gtk.Button("Load selected")
+        self.m_b_load_selected.connect("clicked", self.getSelectedTrajectories, )
         self.m_b_load_all      = gtk.Button("Load all")
         self.m_b_hbox.pack_start(self.m_b_load_selected, expand=False, padding=5)
         self.m_b_hbox.pack_start(self.m_b_load_all, expand=False, padding=5)
-        self.m_vbox.pack_start(self.m_b_hbox, fill=False)
+        self.m_vbox.pack_start(self.m_b_hbox, fill=False, padding=5)
         
         # Show window
         self.m_window.show_all()
     
     def makeTreeView(self):
         # Makes the list view showing all series in the file
-        print("lknsa")
+        headerparser = MParser.HeaderParser(self.m_fname)
+        data = headerparser.getHeaders()
+        
+        # Create the list store
+        self.m_l_store = gtk.ListStore(type("str"))
+        for item in data:
+            self.m_l_store.append((item,))
 
+        self.m_l_view = gtk.TreeView()
+        self.m_l_view.set_model(self.m_l_store)
+        
+        col  = gtk.TreeViewColumn()
+        cell = gtk.CellRendererText()
+        col.pack_start(cell)
+        col.add_attribute(cell, "text", 0)
+        self.m_l_view.append_column(col)
+        
+        # Turn off headers
+        self.m_l_view.set_headers_visible(False)
+        self.m_l_view.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
+
+        
+        # Create the scrolled view
+        scroller = gtk.ScrolledWindow()
+        scroller.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
+        scroller.set_shadow_type(gtk.SHADOW_IN)
+        scroller.add_with_viewport(self.m_l_view)
+        
+        self.m_vbox.pack_start(scroller, expand=True, fill=True)
+    
+    def getSelectedTrajectories(self, widget, data=None):
+        
+        selection = self.m_l_view.get_selection()
+        (model, pathlist) = selection.get_selected_rows()
+        print model
+        print pathlist
+    
+    
+    def main(self):
+        gtk.main()
+        
 class LaunderTypes:
 # Enum-like class to hold various constants
     f_psl    = 0
@@ -268,7 +322,8 @@ class LaunderTypes:
     f_part   = 3
 
 if __name__ == "__main__":
-    app = App()
+    #app = App()
+    app = LoadCSVDialog("silica-fm-part.csv", LaunderTypes().f_part)
     app.main()
     
 
