@@ -47,15 +47,23 @@ class App:
         
         # Create main vbox to hold toolbar and everything else
         self.m_vbox_main = gtk.VBox(homogeneous=False)
+        self.m_window_main.add(self.m_vbox_main)
         
         # Create a hbox for some padding
         self.m_hbox_main = gtk.HBox(homogeneous=False)
-        self.m_hbox_main.pack_start(self.m_vbox_main, padding=10)
-        self.m_window_main.add(self.m_hbox_main)
+        self.m_vbox_main.pack_start(self.m_hbox_main,  \
+                                    padding = LaunderTypes.m_pad)
+
         
         # Add the control pane
         self.m_control_pane = ControlPane()
-        self.m_vbox_main.pack_start(self.m_control_pane.m_vbox)
+        self.m_hbox_main.pack_start(self.m_control_pane.m_vbox,  \
+                                    padding = LaunderTypes.m_pad)
+        
+        # Add the trajectory MPL PlotPane
+        self.m_trj_pane = PlotPane()
+        self.m_hbox_main.pack_start(self.m_trj_pane.m_vbox,  \
+                                    padding = LaunderTypes.m_pad)
         
         self.m_window_main.show_all()
         
@@ -124,7 +132,8 @@ class ControlPane:
         cell  = gtk.CellRendererText()
         self.m_file_tree_col.pack_start(cell, True)
         self.m_file_tree_col.add_attribute(cell, 'text', 0)
-        file_vbox.pack_start(self.m_file_tree_view, padding=5)
+        file_vbox.pack_start(self.m_file_tree_view, \
+                                    padding = LaunderTypes.m_pad)
         
         # Add buttons
         self.m_button_loadfile = gtk.Button("Load selected")
@@ -206,10 +215,12 @@ class ControlPane:
         
         filetype = self.checkForKnownFile(fname)
         if filetype < 0:
-            print("Unknown file! Aborting.")
+            print("Unknown file! Deleting from list.")
+            self.m_file_tree_store.remove(selection[1])
             return None
         else:
-            dialog = LoadCSVDialog(fname, filetype)
+            self.m_dialog = LoadCSVDialog(fname, filetype)
+            self.m_dialog.m_window.connect("destroy", self.getLoadCSVDialogResults, )
     
     def checkForKnownFile(self, fname):
         # Checks that the filename is of a known type, returns the type
@@ -218,6 +229,17 @@ class ControlPane:
         elif re.search("-part-rates.csv", fname): return self.m_types.f_rates
         elif re.search("-part.csv", fname): return self.m_types.f_part
         else: return -1
+
+    def getLoadCSVDialogResults(self, widget, data=None):
+        # Returns the results from the loadCSV class
+        results = self.m_dialog.m_results
+        
+        if (results == []):
+            print "nothing"
+        else:
+            print results
+        
+        del self.m_dialog
     
     def findFiles(self, searchtext):
         # Helper function to search for searchtext, and return lists of files
@@ -232,11 +254,13 @@ class LoadCSVDialog:
     # Class for loading relevant MOPS csv files into the system.
     def destroy(self, widget, data=None):
         self.m_window.destroy()
+        return self.m_results
     
     def __init__(self, fname, filetype):
         self.m_fname = fname    # Name of file to load
         self.m_ftype = filetype # Type of file to load
         self.m_types = LaunderTypes()
+        self.m_results = []     # To be returned by the destroy()
         
         # Initialise a new window
         self.m_window = gtk.Window()
@@ -250,11 +274,13 @@ class LoadCSVDialog:
         
         # Initialise the main VBox for the system
         self.m_vbox = gtk.VBox(homogeneous=False)
-        self.m_hbox.pack_start(self.m_vbox, padding=5)
+        self.m_hbox.pack_start(self.m_vbox, \
+                                    padding = LaunderTypes.m_pad)
         
         # Add some text explaining what to do
         label1 = gtk.Label("Select the trajectories to load.")
-        self.m_vbox.pack_start(label1, padding=5)
+        self.m_vbox.pack_start(label1,  \
+                                    padding = LaunderTypes.m_pad)
         
         # Generate the of trajectories
         self.makeTreeView()
@@ -265,9 +291,12 @@ class LoadCSVDialog:
         self.m_b_load_selected.connect("clicked", self.getSelectedTrajectories, )
         self.m_b_load_all      = gtk.Button("Load all")
         self.m_b_load_all.connect("clicked", self.getAllTrajectories, )
-        self.m_b_hbox.pack_start(self.m_b_load_selected, expand=False, padding=5)
-        self.m_b_hbox.pack_start(self.m_b_load_all, expand=False, padding=5)
-        self.m_vbox.pack_start(self.m_b_hbox, fill=False, padding=5)
+        self.m_b_hbox.pack_start(self.m_b_load_selected, expand=False,  \
+                                    padding = LaunderTypes.m_pad)
+        self.m_b_hbox.pack_start(self.m_b_load_all, expand=False,  \
+                                    padding = LaunderTypes.m_pad)
+        self.m_vbox.pack_start(self.m_b_hbox, fill=False,  \
+                                    padding = LaunderTypes.m_pad)
         
         # Show window
         self.m_window.show_all()
@@ -306,7 +335,8 @@ class LoadCSVDialog:
             scroller.set_shadow_type(gtk.SHADOW_IN)
             scroller.add_with_viewport(self.m_l_view)
             
-            self.m_vbox.pack_start(scroller, expand=True, fill=True)
+            self.m_vbox.pack_start(scroller, expand=True, fill=True,  \
+                                    padding = LaunderTypes.m_pad)
     
     def getSelectedTrajectories(self, widget, data=None):
         # Returns a list of the indicies of the trajectories of interest
@@ -322,20 +352,119 @@ class LoadCSVDialog:
                 indices.append(path[0])
         else:
             print("Nothing selected!") 
+        
+        # Set the selections to be accessed by the destructor
+        self.m_results = indices
+        
+        self.destroy(None, None)
     
     def getAllTrajectories(self, widget, data=None):   
         indices = range(0, len(self.m_l_store))
-        print indices
+        
+        # Set the selections to be accessed by the destructor
+        self.m_results = indices
+        
+        self.destroy(None, None)
         
     def main(self):
         gtk.main()
+
+class PlotPane:
+    # A display class which contains a MPL canvas, plot container and
+    # various other capabilities to enable rapid GUI-driven plots based 
+    # on the list of series in the plot container.
+    
+    def __init__(self):
         
+        # Initialise a h/vbox for storage of all the plot elements.
+        self.m_vbox = gtk.VBox(homogeneous=False)
+        self.m_hbox = gtk.HBox(homogeneous=False)
+        self.m_vbox.pack_start(self.m_hbox, padding=LaunderTypes.m_pad)
+        
+        # Create a frame to hold everything
+        self.m_main_hbox = gtk.HBox(homogeneous=False)
+        frame = gtk.Frame()
+        frame.set_label("PlotPane type here")
+        frame.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
+        frame.add(self.m_main_hbox)
+        self.m_hbox.pack_start(frame, padding=LaunderTypes.m_pad)
+        
+        # Create a scroller and plot list pane
+        self.m_list = self.createPlotList()
+        self.m_main_hbox.pack_start(self.m_list)
+        
+        # Create the MPL canvas
+        self.m_canvas = self.createMPLCanvas()
+        self.m_main_hbox.pack_start(self.m_canvas)
+
+    def createPlotList(self):
+        # Create the liststore
+        # Create the scroller
+        scroller     = gtk.ScrolledWindow()
+        scroller.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
+        scroller.set_shadow_type(gtk.SHADOW_IN)
+        
+        # Use columns: param / unit / PlotAvg / PlotCI
+        store = gtk.ListStore(type("a"), type("a"), \
+                              type(gtk.RadioButton()), 
+                              type(gtk.RadioButton()))
+        view  = gtk.TreeView(store)
+        scroller.add_with_viewport(view)
+        
+        # Create columns
+        renderer = gtk.CellRendererText()
+        col      = gtk.TreeViewColumn("Parameter", renderer, text=0)
+        col.set_sort_column_id(0)
+        view.append_column(col)
+        
+        renderer = gtk.CellRendererText()
+        col      = gtk.TreeViewColumn("Units", renderer, text=0)
+        col.set_sort_column_id(1)
+        view.append_column(col)    
+            
+        renderer = gtk.CellRendererText()
+        col      = gtk.TreeViewColumn("Plot Avg?", renderer, text=0)
+        col.set_sort_column_id(2)
+        view.append_column(col)
+        
+        renderer = gtk.CellRendererText()
+        col      = gtk.TreeViewColumn("Plot CIs?", renderer, text=0)
+        col.set_sort_column_id(3)
+        view.append_column(col)
+        
+        return scroller
+    
+    
+    def createMPLCanvas(self):        
+        # Create the figure
+        figure = Figure(figsize=(5,4), dpi=100)
+        axes = figure.add_subplot(111)
+        canvas = FigureCanvas(figure)
+        return canvas
+    
+    #def createMPLToolbar(self):
+        # Create the toolbar
+        #toolbar = NavToolbar(canvas, self.m_window_main)
+        #return toolbar
+    
+class PlotContainer:
+    # Generic class for holding data series to be plotted via MPL
+    
+    def __init__(self):
+        self.m_plotlist = []        # List of all series to be plot
+        
+
+
 class LaunderTypes:
 # Enum-like class to hold various constants
     f_psl    = 0
     f_rates  = 1
     f_chem   = 2
     f_part   = 3
+    
+    # Global padding delcration
+    m_pad     = 5
+    
 
 if __name__ == "__main__":
     app = App()
