@@ -61,7 +61,7 @@ class App:
                                     padding = LaunderTypes.m_pad)
         
         # Add the trajectory MPL PlotPane
-        self.m_trj_pane = PlotPane()
+        self.m_trj_pane = PlotPane(self.m_window_main)
         self.m_hbox_main.pack_start(self.m_trj_pane.m_vbox,  \
                                     padding = LaunderTypes.m_pad)
         
@@ -86,7 +86,7 @@ class ControlPane:
         # Create the toolbar
         self.m_toolbar = gtk.Toolbar()
         self.m_toolbar.set_style(gtk.TOOLBAR_ICONS)
-        self.m_toolbar.set_icon_size(4)
+        #self.m_toolbar.set_icon_size(4)
         
         # Create key buttons
         self.m_open = gtk.ToolButton(gtk.STOCK_OPEN)
@@ -132,14 +132,26 @@ class ControlPane:
         cell  = gtk.CellRendererText()
         self.m_file_tree_col.pack_start(cell, True)
         self.m_file_tree_col.add_attribute(cell, 'text', 0)
-        file_vbox.pack_start(self.m_file_tree_view, \
+        
+        # Put all of this in a scroller
+        scroller = gtk.ScrolledWindow()
+        scroller.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
+        #scroller.set_shadow_type(gtk.SHADOW_IN)
+        scroller.add_with_viewport(self.m_file_tree_view)
+        file_vbox.pack_start(scroller, \
                                     padding = LaunderTypes.m_pad)
         
-        # Add buttons
+        # Add buttons - load selected button
         self.m_button_loadfile = gtk.Button("Load selected")
         self.m_button_loadfile.connect("clicked",self.loadSelectedFile)
-        file_vbox.pack_start(self.m_button_loadfile, expand=False)
-    
+        file_vbox.pack_start(self.m_button_loadfile, expand=False, \
+                             padding = LaunderTypes.m_pad)
+        # Add buttons - get stats button
+        self.m_button_getstats = gtk.Button("Get statistics")
+        #self.m_button_loadfile.connect("clicked",self.loadSelectedFile)
+        file_vbox.pack_start(self.m_button_getstats, expand=False, \
+                             padding = LaunderTypes.m_pad)
+        
     def chooseFile(self, data=None):
         # Check PyGTK version
         if gtk.pygtk_version < (2,3,90):
@@ -374,7 +386,9 @@ class PlotPane:
     # various other capabilities to enable rapid GUI-driven plots based 
     # on the list of series in the plot container.
     
-    def __init__(self):
+    def __init__(self, window):
+        # Must pass pointer to the main window reference, to allow MPL toolbar
+        # to be properly initialised.
         
         # Initialise a h/vbox for storage of all the plot elements.
         self.m_vbox = gtk.VBox(homogeneous=False)
@@ -383,16 +397,22 @@ class PlotPane:
         
         # Create a frame to hold everything
         self.m_main_vbox = gtk.VBox(homogeneous=False)
+        self.m_main_hbox = gtk.HBox()           # Hbox for padding
+        self.m_main_hbox.pack_start(self.m_main_vbox, padding=LaunderTypes.m_pad)
         self.m_main_vbox.set_size_request(400,300)
         frame = gtk.Frame()
         frame.set_label("PlotPane type here")
         frame.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
         self.m_hbox.add(frame)
-        frame.add(self.m_main_vbox)
+        frame.add(self.m_main_hbox)
         
          # Create the MPL canvas
         self.m_canvas = self.createMPLCanvas()
         self.m_main_vbox.pack_start(self.m_canvas, padding=LaunderTypes.m_pad)
+        
+        # Create the MPL toolbar
+        self.m_mpl_toolbar = self.createMPLToolbar(self.m_canvas, window)
+        self.m_main_vbox.pack_start(self.m_mpl_toolbar, expand=False)
                
         # Create a scroller and plot list pane
         self.m_list = self.createPlotList()
@@ -445,10 +465,10 @@ class PlotPane:
         canvas = FigureCanvas(figure)
         return canvas
     
-    #def createMPLToolbar(self):
+    def createMPLToolbar(self, canvas, window):
         # Create the toolbar
-        #toolbar = NavToolbar(canvas, self.m_window_main)
-        #return toolbar
+        toolbar = NavToolbar(canvas, window)
+        return toolbar
     
 class PlotContainer:
     # Generic class for holding data series to be plotted via MPL
