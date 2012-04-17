@@ -42,7 +42,7 @@ class App:
         
         # Initialise and connect signals
         self.m_window_main.connect("destroy", gtk.main_quit)
-        self.m_window_main.set_default_size(300,600)
+        self.m_window_main.set_default_size(600,500)
         self.m_window_main.set_title("Launder GTK+")
         
         # Create main vbox to hold toolbar and everything else
@@ -382,20 +382,23 @@ class PlotPane:
         self.m_vbox.pack_start(self.m_hbox, padding=LaunderTypes.m_pad)
         
         # Create a frame to hold everything
-        self.m_main_hbox = gtk.HBox(homogeneous=False)
+        self.m_main_vbox = gtk.VBox(homogeneous=False)
+        self.m_main_vbox.set_size_request(400,300)
         frame = gtk.Frame()
         frame.set_label("PlotPane type here")
         frame.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
-        frame.add(self.m_main_hbox)
-        self.m_hbox.pack_start(frame, padding=LaunderTypes.m_pad)
+        self.m_hbox.add(frame)
+        frame.add(self.m_main_vbox)
         
+         # Create the MPL canvas
+        self.m_canvas = self.createMPLCanvas()
+        self.m_main_vbox.pack_start(self.m_canvas, padding=LaunderTypes.m_pad)
+               
         # Create a scroller and plot list pane
         self.m_list = self.createPlotList()
-        self.m_main_hbox.pack_start(self.m_list)
+        self.m_main_vbox.pack_start(self.m_list, padding=LaunderTypes.m_pad)
         
-        # Create the MPL canvas
-        self.m_canvas = self.createMPLCanvas()
-        self.m_main_hbox.pack_start(self.m_canvas)
+
 
     def createPlotList(self):
         # Create the liststore
