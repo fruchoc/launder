@@ -42,7 +42,7 @@ class App:
         
         # Initialise and connect signals
         self.m_window_main.connect("destroy", gtk.main_quit)
-        self.m_window_main.set_default_size(600,500)
+        self.m_window_main.set_default_size(700,450)
         self.m_window_main.set_title("Launder GTK+")
         
         # Create main vbox to hold toolbar and everything else
@@ -230,9 +230,12 @@ class ControlPane:
             print("Unknown file! Deleting from list.")
             self.m_file_tree_store.remove(selection[1])
             return None
-        else:
+        elif filetype > 1:
             self.m_dialog = LoadCSVDialog(fname, filetype)
             self.m_dialog.m_window.connect("destroy", self.getLoadCSVDialogResults, )
+        elif filetype == 1:
+            print("PSL file found. Processing not implemented yet.")
+            return None
     
     def checkForKnownFile(self, fname):
         # Checks that the filename is of a known type, returns the type
