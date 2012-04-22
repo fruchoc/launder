@@ -509,6 +509,15 @@ class PlotPane:
                 self.m_axes.set_yscale("linear")
                 self.m_canvas.draw()
     
+    def plotSelected(self, widget, data=None):
+        # Plots the selected series on the itemlist
+        selection = self.m_listview.get_selection()
+        if selection != None:
+            (model, pathlist) = selection.get_selected_rows()
+        
+            for path in pathlist:
+                indices.append(path[0])
+    
     def addSeries(self, serieslist):
         # Add a series to the plotlist from series list.
         
@@ -517,7 +526,17 @@ class PlotPane:
             self.m_series.append(item)
             
             # Add to the dictionary of liststore references
+            container = SeriesContainer(ref, item)
+            appendDict(self.m_series_dict, container)
+    
 
+class SeriesContainer:
+    # Class to act as a container object for a series and its refernece
+    # in the liststore controlling the MPL plot.
+    
+    def __init__(self, ref, series):
+        self.m_ref = ref
+        self.m_series = series
 
 class LaunderTypes:
 # Enum-like class to hold various constants
@@ -528,7 +547,9 @@ class LaunderTypes:
     
     # Global padding delcration
     m_pad     = 5
-    
+
+def appendDict(dictionary, entry):
+    dictionary[len(dictionary)] = entry
 
 if __name__ == "__main__":
     app = App()
