@@ -37,3 +37,8 @@ class Series:
             unit = "-"
         
         return [param, unit]
+    
+    def printSeries(self):
+        print self.m_name, self.m_unit
+        for x, y in zip(self.m_xvalues, self.m_yvalues):
+            print x, y

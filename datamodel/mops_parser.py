@@ -99,20 +99,36 @@ class TrajectoryParser(Parser):
         csvindices = self.convertPassedIndices(indices)
         
         # Get headers again.
-        hparser = HeaderParser(self.fname)
-        headers = self.getDataFromIndices(hparser.getHeaders(), csvindices)
-        
+        headers = self.getSpecificHeaders(indices)
+
         # Initialise a list of lists for storing data
-        data = []
+        values = []
+        errors = []
         for col in headers:
-            data.append([])
+            values.append([])
+            errors.append([])
         
         # Loop over the result data in the CSV file
         time = []
         for line in result:
             # Append time data
             time.append(line[1])
-            
+            # Get data and values
+            for i in range(0, len(headers)):
+                j = csvindices[i]
+                data = self.getDataAndErrors(line, j)
+                #print j, headers[i], data
+                values[i].append(data[0])
+                errors[i].append(data[1])
+        
+        # Now initialise the series!
+        allseries = []
+        for i in range(0, len(headers)):
+            newseries = series.Series(headers[i], time, values[i], errors[i])
+            allseries.append(newseries)
+        allseries[0].printSeries()
+        
+        return allseries
     
     def checkForEnoughInfo(self):
         lines = []
@@ -120,6 +136,8 @@ class TrajectoryParser(Parser):
         for csvline in self.m_istream:
             line = self.getCSVLine(csvline, type(1.0))
             lines.append(line)
+        
+        self.closeCSV()
         
         if len(lines) < 1:
             return False
@@ -135,13 +153,19 @@ class TrajectoryParser(Parser):
             newindices.append(int(2*(ind+1)))
         return newindices
 
-    def getDataFromIndices(self, datalist, indices):
-        # Given a list of data and indices, return a list with only
+    def getSpecificHeaders(self,  indices):
+        # Given a list of indices, return a list with only
         # the data entries given by those indices
         
-        data = []
-        for i in range(0, len(datalist)):
-            for j in indices:
-                if i == j:
-                    data.append(datalist[i])
-        return data
+        hparser = HeaderParser(self.m_fname)
+        allheaders = hparser.getHeaders()
+        
+        headers = []
+        for i in indices:
+            headers.append(allheaders[i])
+        return headers
+        
+    def getDataAndErrors(self, datalist, index):
+        # Given a list of data an index, return a list with only
+        # values and errors
+        return [datalist[index], datalist[index+1]]

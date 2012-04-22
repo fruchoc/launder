@@ -28,8 +28,8 @@ except:
 
 # Import data model files
 try:
-    import datamodel.mops_trajectory as MTrj
     import datamodel.mops_parser as MParser
+    import datamodel.series as Series
 except:
     print("Couldn't find data model files!")
     sys.exit(4)
@@ -230,10 +230,10 @@ class ControlPane:
             print("Unknown file! Deleting from list.")
             self.m_file_tree_store.remove(selection[1])
             return None
-        elif filetype > 1:
+        elif filetype > 0:
             self.m_dialog = LoadCSVDialog(fname, filetype)
             self.m_dialog.m_window.connect("destroy", self.getLoadCSVDialogResults, )
-        elif filetype == 1:
+        elif filetype == 0:
             print("PSL file found. Processing not implemented yet.")
             return None
     
@@ -249,12 +249,15 @@ class ControlPane:
         # Returns the results from the loadCSV class
         results = self.m_dialog.m_results
         
-        if (results == []):
-            print "nothing"
-        else:
-            print results
+        # Parse the file 
+        if len(results) > 0:
+            parser = MParser.TrajectoryParser(self.m_dialog.m_fname)
+            allseries = parser.start(results)
         
         del self.m_dialog
+        
+        # Now pass the series list over to the PlotPane
+        
     
     def findFiles(self, searchtext):
         # Helper function to search for searchtext, and return lists of files
@@ -393,6 +396,9 @@ class PlotPane:
         # Must pass pointer to the main window reference, to allow MPL toolbar
         # to be properly initialised.
         
+        # Initialise the list of series to be plotted
+        self.m_series = []
+        
         # Initialise a h/vbox for storage of all the plot elements.
         self.m_vbox = gtk.VBox(homogeneous=False)
         self.m_hbox = gtk.HBox(homogeneous=False)
@@ -418,8 +424,8 @@ class PlotPane:
         self.m_main_vbox.pack_start(self.m_mpl_toolbar, expand=False)
                
         # Create a scroller and plot list pane
-        self.m_list = self.createPlotList()
-        self.m_main_vbox.pack_start(self.m_list, padding=LaunderTypes.m_pad)
+        scroller = self.createPlotList()
+        self.m_main_vbox.pack_start(scroller, padding=LaunderTypes.m_pad)
         
 
 
@@ -431,32 +437,32 @@ class PlotPane:
         scroller.set_shadow_type(gtk.SHADOW_IN)
         
         # Use columns: param / unit / PlotAvg / PlotCI
-        store = gtk.ListStore(type("a"), type("a"), \
+        self.m_liststore = gtk.ListStore(type("a"), type("a"), \
                               type(gtk.RadioButton()), 
                               type(gtk.RadioButton()))
-        view  = gtk.TreeView(store)
-        scroller.add_with_viewport(view)
+        self.m_listview  = gtk.TreeView(self.m_liststore)
+        scroller.add_with_viewport(self.m_listview)
         
         # Create columns
         renderer = gtk.CellRendererText()
         col      = gtk.TreeViewColumn("Parameter", renderer, text=0)
         col.set_sort_column_id(0)
-        view.append_column(col)
+        self.m_listview.append_column(col)
         
         renderer = gtk.CellRendererText()
         col      = gtk.TreeViewColumn("Units", renderer, text=0)
         col.set_sort_column_id(1)
-        view.append_column(col)    
+        self.m_listview.append_column(col)    
             
         renderer = gtk.CellRendererText()
         col      = gtk.TreeViewColumn("Plot Avg?", renderer, text=0)
         col.set_sort_column_id(2)
-        view.append_column(col)
+        self.m_listview.append_column(col)
         
         renderer = gtk.CellRendererText()
         col      = gtk.TreeViewColumn("Plot CIs?", renderer, text=0)
         col.set_sort_column_id(3)
-        view.append_column(col)
+        self.m_listview.append_column(col)
         
         return scroller
     
@@ -473,12 +479,11 @@ class PlotPane:
         toolbar = NavToolbar(canvas, window)
         return toolbar
     
-class PlotContainer:
-    # Generic class for holding data series to be plotted via MPL
-    
-    def __init__(self):
-        self.m_plotlist = []        # List of all series to be plot
+    def addSeries(self, serieslist):
+        # Add a series to the plotlist from series list.
         
+        for item in serieslist:
+            self.m_liststore.append([item.m_name, it])
 
 
 class LaunderTypes:
