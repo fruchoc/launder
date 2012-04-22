@@ -399,6 +399,7 @@ class PlotPane:
         
         # Initialise the list of series to be plotted
         self.m_series = []
+        self.m_series_dict = {}
         
         # Initialise a h/vbox for storage of all the plot elements.
         self.m_vbox = gtk.VBox(homogeneous=False)
@@ -417,12 +418,15 @@ class PlotPane:
         frame.add(self.m_main_hbox)
         
          # Create the MPL canvas
-        self.m_canvas = self.createMPLCanvas()
-        self.m_main_vbox.pack_start(self.m_canvas, padding=LaunderTypes.m_pad)
-        
+        self.m_canvas = self.createMPLCanvas()        
         # Create the MPL toolbar
         self.m_mpl_toolbar = self.createMPLToolbar(self.m_canvas, window)
         self.m_main_vbox.pack_start(self.m_mpl_toolbar, expand=False)
+        self.m_main_vbox.pack_start(self.m_canvas, padding=LaunderTypes.m_pad)
+        
+        # Add some buttons
+        hbox = self.createCommandButtons()
+        self.m_main_vbox.pack_start(hbox, expand=False)
                
         # Create a scroller and plot list pane
         scroller = self.createPlotList()
@@ -459,7 +463,7 @@ class PlotPane:
     def createMPLCanvas(self):        
         # Create the figure
         figure = Figure(figsize=(5,4), dpi=100)
-        axes = figure.add_subplot(111)
+        self.m_axes = figure.add_subplot(111)
         canvas = FigureCanvas(figure)
         return canvas
     
@@ -468,11 +472,51 @@ class PlotPane:
         toolbar = NavToolbar(canvas, window)
         return toolbar
     
+    def createCommandButtons(self):
+        # Create handy buttons for plotting thins with MPL]
+        
+        self.m_b_plot_selection = gtk.Button("Plot selected")
+        self.m_b_logx_toggle    = gtk.CheckButton("LogX?")
+        self.m_b_logy_toggle    = gtk.CheckButton("LogY?")
+        self.m_b_toggle_cis     = gtk.CheckButton("Plot CIs?")
+        
+        # Connect some signals
+        self.m_b_logx_toggle.connect("toggled", self.toggleLogAxis, "x")
+        self.m_b_logy_toggle.connect("toggled", self.toggleLogAxis, "y")
+        
+        hbox = gtk.HBox(homogeneous=False)
+        hbox.pack_start(self.m_b_plot_selection, expand=False)
+        hbox.pack_start(self.m_b_logx_toggle, expand=False)
+        hbox.pack_start(self.m_b_logy_toggle, expand=False)
+        hbox.pack_start(self.m_b_toggle_cis, expand=False)
+        
+        return hbox
+    
+    def toggleLogAxis(self, widget, data):
+        # Toggles between logx/logy axes
+        if widget.get_active():
+            if data == "x":
+                self.m_axes.set_xscale("log")
+                self.m_canvas.draw()
+            elif data == "y":
+                self.m_axes.set_yscale("log")
+                self.m_canvas.draw()
+        else:
+            if data == "x":
+                self.m_axes.set_xscale("linear")
+                self.m_canvas.draw()
+            if data == "y":
+                self.m_axes.set_yscale("linear")
+                self.m_canvas.draw()
+    
     def addSeries(self, serieslist):
         # Add a series to the plotlist from series list.
         
         for item in serieslist:
-            self.m_liststore.append(item.getPlotPaneList())
+            ref = self.m_liststore.append(item.getPlotPaneList())
+            self.m_series.append(item)
+            
+            # Add to the dictionary of liststore references
 
 
 class LaunderTypes:
