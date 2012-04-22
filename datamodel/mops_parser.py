@@ -1,4 +1,5 @@
 import re
+import series
 
 class Parser:
     # Default constructor
@@ -72,3 +73,75 @@ class HeaderParser(Parser):
             print("Unrecognised MOPS file format.")
             ans = False
         return ans
+
+class TrajectoryParser(Parser):
+    # Parses MOPS moment files with time versus some parameter.
+    # Returns a trajectory type for each of the indices given
+    
+    def start(self, indices):
+        # Loads the trajectories with headers of a given index
+        # as supplied by <indices>, a list of header indices
+        
+        # Check there are some indices supplied!
+        if len(indices) < 1:
+            print("No indices supplied for loading.")
+            self.closeCSV()
+            return None
+        
+        # Check there is enough information in the CSV file
+        result = self.checkForEnoughInfo()
+        if (not result):
+            print("No data in file {0}!".format(self.m_fname))
+            self.closeCSV()
+            return None
+        
+        # Convert indices
+        csvindices = self.convertPassedIndices(indices)
+        
+        # Get headers again.
+        hparser = HeaderParser(self.fname)
+        headers = self.getDataFromIndices(hparser.getHeaders(), csvindices)
+        
+        # Initialise a list of lists for storing data
+        data = []
+        for col in headers:
+            data.append([])
+        
+        # Loop over the result data in the CSV file
+        time = []
+        for line in result:
+            # Append time data
+            time.append(line[1])
+            
+    
+    def checkForEnoughInfo(self):
+        lines = []
+        headers = self.m_istream.readline()
+        for csvline in self.m_istream:
+            line = self.getCSVLine(csvline, type(1.0))
+            lines.append(line)
+        
+        if len(lines) < 1:
+            return False
+        else:
+            return lines
+    
+    def convertPassedIndices(self, indices):
+        # Given a list of indices from the app (which don't correspond
+        # to the real ones in the file), convert them into the actual
+        # column numbers in the moment file.
+        newindices = []
+        for ind in indices:
+            newindices.append(int(2*(ind+1)))
+        return newindices
+
+    def getDataFromIndices(self, datalist, indices):
+        # Given a list of data and indices, return a list with only
+        # the data entries given by those indices
+        
+        data = []
+        for i in range(0, len(datalist)):
+            for j in indices:
+                if i == j:
+                    data.append(datalist[i])
+        return data
