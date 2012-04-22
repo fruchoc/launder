@@ -3,6 +3,16 @@
 Series class is holds information about a series ready for plotting.
 """
 
+# Import pygtk and gtk packages.
+# obtain for any platform at http://www.pygtk.org
+try:
+    import pygtk
+    pygtk.require('2.0')
+    import gtk
+except:
+    print("Couldn't find pygtk or gtk.")
+    sys.exit(1)
+
 
 class Series:
     def __init__(self, name, xseries, yseries, errors=None):
@@ -42,3 +52,9 @@ class Series:
         print self.m_name, self.m_unit
         for x, y in zip(self.m_xvalues, self.m_yvalues):
             print x, y
+
+class Trajectory(Series):
+    
+    def getPlotPaneList(self):
+        item = [self.m_name, self.m_unit]
+        return item

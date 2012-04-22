@@ -56,7 +56,7 @@ class App:
 
         
         # Add the control pane
-        self.m_control_pane = ControlPane()
+        self.m_control_pane = ControlPane(self)
         self.m_hbox_main.pack_start(self.m_control_pane.m_vbox,  \
                                     padding = LaunderTypes.m_pad)
         
@@ -74,11 +74,12 @@ class App:
         gtk.main()
 
 class ControlPane:
-    def __init__(self):
+    def __init__(self, app):
         # Initialise empty variables
         self.m_auto_files = []
         self.m_selected_files = []
         self.m_types = LaunderTypes()
+        self.m_app = app
         
         # Create main vbox for control pane
         self.m_vbox = gtk.VBox(homogeneous=False)
@@ -257,7 +258,7 @@ class ControlPane:
         del self.m_dialog
         
         # Now pass the series list over to the PlotPane
-        
+        self.m_app.m_trj_pane.addSeries(allseries)
     
     def findFiles(self, searchtext):
         # Helper function to search for searchtext, and return lists of files
@@ -410,7 +411,7 @@ class PlotPane:
         self.m_main_hbox.pack_start(self.m_main_vbox, padding=LaunderTypes.m_pad)
         self.m_main_vbox.set_size_request(400,300)
         frame = gtk.Frame()
-        frame.set_label("PlotPane type here")
+        frame.set_label("MOPS trajectories")
         frame.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
         self.m_hbox.add(frame)
         frame.add(self.m_main_hbox)
@@ -425,9 +426,9 @@ class PlotPane:
                
         # Create a scroller and plot list pane
         scroller = self.createPlotList()
-        self.m_main_vbox.pack_start(scroller, padding=LaunderTypes.m_pad)
+        self.m_main_vbox.pack_start(scroller, expand=False, \
+                                    padding=LaunderTypes.m_pad)
         
-
 
     def createPlotList(self):
         # Create the liststore
@@ -437,34 +438,22 @@ class PlotPane:
         scroller.set_shadow_type(gtk.SHADOW_IN)
         
         # Use columns: param / unit / PlotAvg / PlotCI
-        self.m_liststore = gtk.ListStore(type("a"), type("a"), \
-                              type(gtk.RadioButton()), 
-                              type(gtk.RadioButton()))
+        self.m_liststore = gtk.ListStore(type("a"), type("a"))
         self.m_listview  = gtk.TreeView(self.m_liststore)
         scroller.add_with_viewport(self.m_listview)
         
         # Create columns
-        renderer = gtk.CellRendererText()
-        col      = gtk.TreeViewColumn("Parameter", renderer, text=0)
-        col.set_sort_column_id(0)
-        self.m_listview.append_column(col)
-        
-        renderer = gtk.CellRendererText()
-        col      = gtk.TreeViewColumn("Units", renderer, text=0)
-        col.set_sort_column_id(1)
-        self.m_listview.append_column(col)    
-            
-        renderer = gtk.CellRendererText()
-        col      = gtk.TreeViewColumn("Plot Avg?", renderer, text=0)
-        col.set_sort_column_id(2)
-        self.m_listview.append_column(col)
-        
-        renderer = gtk.CellRendererText()
-        col      = gtk.TreeViewColumn("Plot CIs?", renderer, text=0)
-        col.set_sort_column_id(3)
-        self.m_listview.append_column(col)
+        self.addColumn("Parameter", 0)
+        self.addColumn("Units", 1) 
         
         return scroller
+    
+    def addColumn(self, title, colID):
+        col = gtk.TreeViewColumn(title, gtk.CellRendererText(), \
+                             text=colID)
+        col.set_resizable(True)
+        col.set_sort_column_id(colID)
+        self.m_listview.append_column(col)
     
     
     def createMPLCanvas(self):        
@@ -483,7 +472,7 @@ class PlotPane:
         # Add a series to the plotlist from series list.
         
         for item in serieslist:
-            self.m_liststore.append([item.m_name, it])
+            self.m_liststore.append(item.getPlotPaneList())
 
 
 class LaunderTypes:

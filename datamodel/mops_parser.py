@@ -124,9 +124,9 @@ class TrajectoryParser(Parser):
         # Now initialise the series!
         allseries = []
         for i in range(0, len(headers)):
-            newseries = series.Series(headers[i], time, values[i], errors[i])
+            newseries = series.Trajectory(headers[i], time, values[i],\
+                                           errors[i])
             allseries.append(newseries)
-        allseries[0].printSeries()
         
         return allseries
     
