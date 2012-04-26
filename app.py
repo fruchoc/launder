@@ -42,7 +42,8 @@ class App:
         
         # Initialise and connect signals
         self.m_window_main.connect("destroy", gtk.main_quit)
-        self.m_window_main.set_default_size(700,450)
+        self.m_window_main.set_default_size(LaunderTypes.x_main,\
+                                            LaunderTypes.y_main)
         self.m_window_main.set_title("Launder GTK+")
         
         # Create main vbox to hold toolbar and everything else
@@ -96,6 +97,9 @@ class ControlPane:
         self.m_open.connect("clicked", self.appendFilesToTreeView, "sel")
         self.m_auto = gtk.ToolButton(gtk.STOCK_EXECUTE)
         self.m_auto.set_tooltip_text("Automatically find files")
+        self.m_b_delete = gtk.ToolButton(gtk.STOCK_DELETE)
+        self.m_b_delete.set_tooltip_text("Delete file entry")
+        self.m_b_delete.connect("clicked", self.removeSelectedFile, )
         self.m_auto.connect("clicked", self.autoFindFiles, )
         self.m_auto.connect("clicked", self.appendFilesToTreeView, "auto")
         self.m_quit = gtk.ToolButton(gtk.STOCK_QUIT)
@@ -105,7 +109,8 @@ class ControlPane:
         # Insert buttons
         self.m_toolbar.insert(self.m_open, 0)
         self.m_toolbar.insert(self.m_auto, 1)
-        self.m_toolbar.insert(self.m_quit, 2)
+        self.m_toolbar.insert(self.m_b_delete, 2)
+        self.m_toolbar.insert(self.m_quit, 3)
         
         # Add toolbar to pane's vbox
         self.m_vbox.pack_start(self.m_toolbar, fill=False, expand=False)
@@ -238,6 +243,14 @@ class ControlPane:
             print("PSL file found. Processing not implemented yet.")
             return None
     
+    def removeSelectedFile(self, widget):
+        # Removes the file entry from the tresstore
+        selection = self.m_file_tree_view.get_selection().get_selected()
+        if selection[1] == None:
+            print("Nothing selected!")
+        else:
+            self.m_file_tree_store.remove(selection[1])
+    
     def checkForKnownFile(self, fname):
         # Checks that the filename is of a known type, returns the type
         if re.search("-psl", fname): return self.m_types.f_psl
@@ -254,11 +267,12 @@ class ControlPane:
         if len(results) > 0:
             parser = MParser.TrajectoryParser(self.m_dialog.m_fname)
             allseries = parser.start(results)
+            
+            # Now pass the series list over to the PlotPane
+            self.m_app.m_trj_pane.addSeries(allseries)
         
         del self.m_dialog
-        
-        # Now pass the series list over to the PlotPane
-        self.m_app.m_trj_pane.addSeries(allseries)
+
     
     def findFiles(self, searchtext):
         # Helper function to search for searchtext, and return lists of files
@@ -298,7 +312,7 @@ class LoadCSVDialog:
         
         # Add some text explaining what to do
         label1 = gtk.Label("Select the trajectories to load.")
-        self.m_vbox.pack_start(label1,  \
+        self.m_vbox.pack_start(label1,  expand=False, \
                                     padding = LaunderTypes.m_pad)
         
         # Generate the of trajectories
@@ -314,7 +328,7 @@ class LoadCSVDialog:
                                     padding = LaunderTypes.m_pad)
         self.m_b_hbox.pack_start(self.m_b_load_all, expand=False,  \
                                     padding = LaunderTypes.m_pad)
-        self.m_vbox.pack_start(self.m_b_hbox, fill=False,  \
+        self.m_vbox.pack_start(self.m_b_hbox, fill=False, expand=False,  \
                                     padding = LaunderTypes.m_pad)
         
         # Show window
@@ -398,7 +412,6 @@ class PlotPane:
         # to be properly initialised.
         
         # Initialise the list of series to be plotted
-        self.m_series = []
         self.m_series_dict = {}
         
         # Initialise a h/vbox for storage of all the plot elements.
@@ -410,7 +423,7 @@ class PlotPane:
         self.m_main_vbox = gtk.VBox(homogeneous=False)
         self.m_main_hbox = gtk.HBox()           # Hbox for padding
         self.m_main_hbox.pack_start(self.m_main_vbox, padding=LaunderTypes.m_pad)
-        self.m_main_vbox.set_size_request(400,300)
+        #self.m_main_vbox.set_size_request(400,300)
         frame = gtk.Frame()
         frame.set_label("MOPS trajectories")
         frame.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
@@ -430,8 +443,13 @@ class PlotPane:
                
         # Create a scroller and plot list pane
         scroller = self.createPlotList()
-        self.m_main_vbox.pack_start(scroller, expand=False, \
+        box = gtk.HBox()
+        box.set_size_request(LaunderTypes.x_lv,LaunderTypes.y_lv)
+        box.add(scroller)
+        self.m_main_vbox.pack_start(box, expand=False, \
                                     padding=LaunderTypes.m_pad)
+        #self.m_main_vbox.pack_start(scroller, expand=False, \
+         #                           padding=LaunderTypes.m_pad)
         
 
     def createPlotList(self):
@@ -442,13 +460,15 @@ class PlotPane:
         scroller.set_shadow_type(gtk.SHADOW_IN)
         
         # Use columns: param / unit / PlotAvg / PlotCI
-        self.m_liststore = gtk.ListStore(type("a"), type("a"))
+        self.m_liststore = gtk.ListStore(type(1), type("a"), type("a"))
         self.m_listview  = gtk.TreeView(self.m_liststore)
+        self.m_listview.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
         scroller.add_with_viewport(self.m_listview)
         
         # Create columns
-        self.addColumn("Parameter", 0)
-        self.addColumn("Units", 1) 
+        self.addColumn("ID", 0) 
+        self.addColumn("Parameter", 1)
+        self.addColumn("Units", 2) 
         
         return scroller
     
@@ -479,16 +499,27 @@ class PlotPane:
         self.m_b_logx_toggle    = gtk.CheckButton("LogX?")
         self.m_b_logy_toggle    = gtk.CheckButton("LogY?")
         self.m_b_toggle_cis     = gtk.CheckButton("Plot CIs?")
+        self.m_b_reset          = gtk.Button("Reset")
+        
+        # Add some tooltips
+        self.m_b_plot_selection.set_tooltip_text("Plot the selected series")
+        self.m_b_logx_toggle.set_tooltip_text("Toggle Log10 x scale")
+        self.m_b_logy_toggle.set_tooltip_text("Toggle log10 y scale")
+        self.m_b_toggle_cis.set_tooltip_text("Toggle showing 99.9% CIs")
+        self.m_b_reset.set_tooltip_text("Reset the plot")
         
         # Connect some signals
+        self.m_b_plot_selection.connect("clicked", self.plotSelected, None)
         self.m_b_logx_toggle.connect("toggled", self.toggleLogAxis, "x")
         self.m_b_logy_toggle.connect("toggled", self.toggleLogAxis, "y")
+        self.m_b_reset.connect("clicked", self.resetPlot, None)
         
         hbox = gtk.HBox(homogeneous=False)
         hbox.pack_start(self.m_b_plot_selection, expand=False)
         hbox.pack_start(self.m_b_logx_toggle, expand=False)
         hbox.pack_start(self.m_b_logy_toggle, expand=False)
         hbox.pack_start(self.m_b_toggle_cis, expand=False)
+        hbox.pack_end(self.m_b_reset, expand=False)
         
         return hbox
     
@@ -514,29 +545,57 @@ class PlotPane:
         selection = self.m_listview.get_selection()
         if selection != None:
             (model, pathlist) = selection.get_selected_rows()
-        
+            
+            id_list = []
+            name_list = []
+            unit_list = []
+            
             for path in pathlist:
-                indices.append(path[0])
+                id_list.append(model[path[0]][0])
+                name_list.append(model[path[0]][1])
+                unit_list.append(model[path[0]][2])
+            
+            if not checkListOfStrings(unit_list):
+                print("Wrong units being plotted on same axis!")
+                print("Nothing plotted.")
+            else:
+                for id in id_list:
+                    self.plotSeries(self.m_series_dict[id])
+    
+    def plotSeries(self, series):
+        # Displays the selected series in the MPL figure
+        self.m_axes.plot(series.m_xvalues, series.m_yvalues, \
+                         label=series.m_name)
+        self.m_axes.set_autoscale_on(True)
+        self.m_canvas.draw()
     
     def addSeries(self, serieslist):
         # Add a series to the plotlist from series list.
         
         for item in serieslist:
-            ref = self.m_liststore.append(item.getPlotPaneList())
-            self.m_series.append(item)
+            # Get the ID of the run
+            entry = [getNextIndex(self.m_series_dict)]
+            entry += item.getPlotPaneList()
             
-            # Add to the dictionary of liststore references
-            container = SeriesContainer(ref, item)
-            appendDict(self.m_series_dict, container)
+            # Add the series to the dictionary
+            appendDict(self.m_series_dict, item)
+            
+            # Add it to the listview
+            self.m_liststore.append(entry)
     
+    def resetPlot(self, widget, data=None):
+        # Removes all the lines from the figure
+        for i in range(0, len(self.m_axes.lines)):
+            self.m_axes.lines.pop(0)
+        self.m_axes.set_xlim(0,1)
+        self.m_axes.set_ylim(0,1)
+        self.m_axes.set_xscale("linear")
+        self.m_axes.set_yscale("linear")
+        self.m_canvas.draw()
+        self.m_axes.set_autoscale_on(True)
+        self.m_axes.autoscale_view(True,True,True)
 
-class SeriesContainer:
-    # Class to act as a container object for a series and its refernece
-    # in the liststore controlling the MPL plot.
-    
-    def __init__(self, ref, series):
-        self.m_ref = ref
-        self.m_series = series
+
 
 class LaunderTypes:
 # Enum-like class to hold various constants
@@ -547,9 +606,32 @@ class LaunderTypes:
     
     # Global padding delcration
     m_pad     = 5
+    
+    # Window size request declrations
+    x_main      = 800
+    y_main      = 600
+    
+    # Listview default
+    x_lv        = int(x_main * 0.6)
+    y_lv        = int(y_main * 0.2)
+
+    
+def checkListOfStrings(stringlist):
+    # Checks if all the elements of a list are identical.
+    if len(stringlist) < 2:
+        return True
+    else:
+        val = stringlist[0]
+        ans = True
+        for item in stringlist[1:]:
+            if val != item: ans = False
+        return ans
 
 def appendDict(dictionary, entry):
     dictionary[len(dictionary)] = entry
+
+def getNextIndex(dictionary):
+    return len(dictionary)
 
 if __name__ == "__main__":
     app = App()
@@ -557,4 +639,4 @@ if __name__ == "__main__":
     app.main()
     
 
-print "all okay?"
+print "Goodbye!"
