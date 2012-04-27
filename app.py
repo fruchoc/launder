@@ -414,6 +414,9 @@ class PlotPane:
         # Initialise the list of series to be plotted
         self.m_series_dict = {}
         
+        # Is the plot editor open?
+        self.m_editOpen = False
+        
         # Initialise a h/vbox for storage of all the plot elements.
         self.m_vbox = gtk.VBox(homogeneous=False)
         self.m_hbox = gtk.HBox(homogeneous=False)
@@ -430,15 +433,18 @@ class PlotPane:
         self.m_hbox.add(frame)
         frame.add(self.m_main_hbox)
         
+        # Initialise the buttons
+        hbox = self.createCommandButtons()
+        
          # Create the MPL canvas
-        self.m_canvas = self.createMPLCanvas()        
+        self.createMPLCanvas()     
+           
         # Create the MPL toolbar
         self.m_mpl_toolbar = self.createMPLToolbar(self.m_canvas, window)
         self.m_main_vbox.pack_start(self.m_mpl_toolbar, expand=False)
         self.m_main_vbox.pack_start(self.m_canvas, padding=LaunderTypes.m_pad)
         
-        # Add some buttons
-        hbox = self.createCommandButtons()
+        # Add the buttons after the plot
         self.m_main_vbox.pack_start(hbox, expand=False)
                
         # Create a scroller and plot list pane
@@ -483,10 +489,17 @@ class PlotPane:
     
     def createMPLCanvas(self):        
         # Create the figure
-        figure = Figure(figsize=(5,4), dpi=100)
-        self.m_axes = figure.add_subplot(111)
-        canvas = FigureCanvas(figure)
-        return canvas
+        self.m_figure = Figure(figsize=(5,4), dpi=100)
+        self.m_canvas = FigureCanvas(self.m_figure)
+        self.initialisePlot()
+    
+    def initialisePlot(self):
+        self.m_axes = self.m_figure.add_subplot(111)
+        self.m_axes.set_xlabel("time, s")
+        self.m_figure.subplots_adjust(bottom=0.15)
+        self.toggleLogAxis(self.m_b_logx_toggle, "x")
+        self.toggleLogAxis(self.m_b_logy_toggle, "y")
+        self.m_canvas.draw()
     
     def createMPLToolbar(self, canvas, window):
         # Create the toolbar
@@ -500,6 +513,7 @@ class PlotPane:
         self.m_b_logx_toggle    = gtk.CheckButton("LogX?")
         self.m_b_logy_toggle    = gtk.CheckButton("LogY?")
         self.m_b_toggle_cis     = gtk.CheckButton("Plot CIs?")
+        self.m_b_editor         = gtk.Button("Edit plot")
         self.m_b_reset          = gtk.Button("Reset")
         
         # Add some tooltips
@@ -507,12 +521,14 @@ class PlotPane:
         self.m_b_logx_toggle.set_tooltip_text("Toggle Log10 x scale")
         self.m_b_logy_toggle.set_tooltip_text("Toggle log10 y scale")
         self.m_b_toggle_cis.set_tooltip_text("Toggle showing 99.9% CIs")
+        self.m_b_editor.set_tooltip_text("Open the plot editor")
         self.m_b_reset.set_tooltip_text("Reset the plot")
         
         # Connect some signals
         self.m_b_plot_selection.connect("clicked", self.plotSelected, None)
         self.m_b_logx_toggle.connect("toggled", self.toggleLogAxis, "x")
         self.m_b_logy_toggle.connect("toggled", self.toggleLogAxis, "y")
+        self.m_b_editor.connect("clicked", self.editAxes, None)
         self.m_b_reset.connect("clicked", self.resetPlot, None)
         
         hbox = gtk.HBox(homogeneous=False)
@@ -520,7 +536,9 @@ class PlotPane:
         hbox.pack_start(self.m_b_logx_toggle, expand=False)
         hbox.pack_start(self.m_b_logy_toggle, expand=False)
         hbox.pack_start(self.m_b_toggle_cis, expand=False)
+        
         hbox.pack_end(self.m_b_reset, expand=False)
+        hbox.pack_end(self.m_b_editor, expand=False)
         
         return hbox
     
@@ -560,15 +578,20 @@ class PlotPane:
                 print("Wrong units being plotted on same axis!")
                 print("Nothing plotted.")
             else:
+                self.m_axes.set_ylabel("parameter, {0}".format(unit_list[0]))
+                lines = []
                 for id in id_list:
-                    self.plotSeries(self.m_series_dict[id])
+                    lines.append(self.plotSeries(self.m_series_dict[id]))
+                    
     
     def plotSeries(self, series):
         # Displays the selected series in the MPL figure
-        self.m_axes.plot(series.m_xvalues, series.m_yvalues, \
+        line = self.m_axes.plot(series.m_xvalues, series.m_yvalues, \
                          label=series.m_name)
         self.m_axes.set_autoscale_on(True)
+        self.m_axes.legend(loc=0, prop={'size':10})
         self.m_canvas.draw()
+        return line
     
     def addSeries(self, serieslist):
         # Add a series to the plotlist from series list.
@@ -584,51 +607,188 @@ class PlotPane:
             # Add it to the listview
             self.m_liststore.append(entry)
     
+    def removeSelected(self):
+        # Removes the selected series from the list
+        
+        selection = self.m_listview.get_selection()
+        if selection != None:
+            (model, pathlist) = selection.get_selected()
+            
+            for path in pathlist:
+                print path
+                self.m_liststore.remove(path)
+        else:
+            print("Nothing selected.")
+    
+    def clearSeries(self):
+        # Clears all the series and resets the plot
+        
+        self.m_liststore.clear()
+        for k in self.m_series_dict.keys():
+            del self.m_series_dict[k]
+        self.m_series_dict = {}
+        
+        self.resetPlot(None, None)
+    
+    def editAxes(self, widget, data=None):
+        if not self.m_editOpen: editor = PlotEditor(self)
+    
     def resetPlot(self, widget, data=None):
         # Removes all the lines from the figure
         for i in range(0, len(self.m_axes.lines)):
             self.m_axes.lines.pop(0)
-        self.m_axes.set_xlim(0,1)
-        self.m_axes.set_ylim(0,1)
-        self.toggleLogAxis(self.m_b_logx_toggle, "x")
-        self.toggleLogAxis(self.m_b_logy_toggle, "y")
-        self.m_canvas.draw()
-        self.m_axes.set_autoscale_on(True)
-        self.m_axes.autoscale_view(True,True,True)
+        self.m_figure.clear()
+        self.initialisePlot()
 
 class SidePane:
     # Pane for adding/removing individual series
     
-    def __init__(self, plotpane):
-        self.m_plotpane = plotpane
+    def __init__(self, pane):
+        self.m_plotpane = pane
         
         self.vbox = gtk.VBox()
         
         # Create the toolbar
-        self.m_toolbar = gtk.Toolbar()
-        self.m_toolbar.set_style(gtk.TOOLBAR_ICONS)
-        self.m_toolbar.set_orientation(gtk.ORIENTATION_VERTICAL)
-        self.vbox.add(self.m_toolbar)
+        toolbar = gtk.Toolbar()
+        toolbar.set_style(gtk.TOOLBAR_ICONS)
+        toolbar.set_orientation(gtk.ORIENTATION_VERTICAL)
+        self.vbox.add(toolbar)
         
         # Delete button
-        self.b_delete = gtk.ToolButton(gtk.STOCK_REMOVE)
-        self.b_delete.set_tooltip_text("Delete series")
-        self.m_toolbar.insert(self.b_delete, 0)
+        b_delete = gtk.ToolButton(gtk.STOCK_REMOVE)
+        b_delete.set_tooltip_text("Delete series")
+        b_delete.connect("clicked", self.deleteSeries, )
+        toolbar.insert(b_delete, 0)
         
         # Add misc. series button
-        self.b_add    = gtk.ToolButton(gtk.STOCK_ADD)
-        self.b_add.set_tooltip_text("Add miscellaneous series")
-        self.m_toolbar.insert(self.b_add, 1)
+        b_add    = gtk.ToolButton(gtk.STOCK_ADD)
+        b_add.set_tooltip_text("Add miscellaneous series")
+        b_add.connect("clicked", self.addMiscSeries, )
+        toolbar.insert(b_add, 1)
         
         # Clear all series button
+        b_clear  = gtk.ToolButton(gtk.STOCK_CLEAR)
+        b_clear.set_tooltip_text("Clear all series")
+        b_clear.connect("clicked", self.clearAllSeries, )
+        toolbar.insert(b_clear, 2)
+        
     
     def deleteSeries(self, widget, data=None):
         # Deletes a series entry (or multiple)
+        self.m_plotpane.removeSelected()
+    
+    def addMiscSeries(self, widget, data=None):
+        # Adds a miscellaneous series from a data file
+        print("Not implemented yet")
+    
+    def clearAllSeries(self, widget, data=None):
+        self.m_plotpane.clearSeries()
+
+class PlotEditor:
+    # A class to edit the properties of a MPL plot in a PlotPane.
+    
+    def destroy(self, widget, data=None):
+        self.m_window.destroy()
+        self.m_pane.m_editOpen = False
+    
+    def __init__(self, pane):
+        self.m_pane = pane
+        self.m_axes = pane.m_axes
+        self.m_canvas = pane.m_canvas
+        pane.m_editOpen = True
         
-        selection = self.m_plotpane.m_listview.get_selection()
+        self.m_window = gtk.Window()
+        self.m_window.connect("destroy", self.destroy, )
+        #self.m_window.set_default_size(400,300)
+        self.m_window.set_title("Edit plot characteristics..")
         
-        if selection != "":
-            print "zomg"
+        box = gtk.VBox()
+        self.m_window.add(box)
+        
+        padhbox = gtk.HBox()
+        box.pack_start(padhbox, padding=LaunderTypes.m_pad)
+        padvbox = gtk.VBox(homogeneous=False)
+        padhbox.pack_start(padvbox, padding=LaunderTypes.m_pad)
+        
+        (self.xl_text, xl_but, xl_box) = self.createButtonEntry("Set x label")
+        padvbox.pack_start(xl_box, fill=False, expand=False)
+        xl_but.connect("clicked", self.setLabel, "x")
+        (self.yl_text, yl_but, yl_box) = self.createButtonEntry("Set y label")
+        padvbox.pack_start(yl_box, fill=False, expand=False)
+        yl_but.connect("clicked", self.setLabel, "y")
+        
+        # CREATE X/Y LIMITS SETTERS
+        (self.xr_min, self.xr_max, xr_but, xr_box) = self.createLimits("x")
+        padvbox.pack_start(xr_box, fill=False, expand=False)
+        xr_but.connect("clicked", self.setLimits, "x")
+        
+        (self.yr_min, self.yr_max, yr_but, yr_box) = self.createLimits("y")
+        padvbox.pack_start(yr_box, fill=False, expand=False)
+        yr_but.connect("clicked", self.setLimits, "y")
+        
+        self.m_window.show_all()
+    
+    def createButtonEntry(self, text):
+        entry = gtk.Entry()
+        button = gtk.Button(text)
+        hbox = gtk.HBox(homogeneous=False)
+        hbox.pack_start(entry, padding=2)
+        hbox.pack_start(button, padding=2, fill=False)
+        
+        return (entry, button, hbox)
+    
+    def createLimits(self, text):
+        # Creates fields for x/y limits
+        hbox = gtk.HBox(homogeneous=False)
+        
+        label1 = gtk.Label("Min:")
+        hbox.pack_start(label1)
+        entry1 = gtk.Entry(10)
+        hbox.pack_start(entry1, expand=False, padding=LaunderTypes.m_pad)
+        
+        label2 = gtk.Label("Max:")
+        hbox.pack_start(label2)
+        entry2 = gtk.Entry(10)
+        hbox.pack_start(entry2, expand=False, padding=LaunderTypes.m_pad)
+        
+        button = gtk.Button("Set " + text + " limit")
+        hbox.pack_start(button)
+        
+        return (entry1, entry2, button, hbox)
+    
+    def setLabel(self, widget, data):
+        # Sets the x/y labels of the current axis
+        if data == "x":
+            text = self.xl_text.get_text()
+            self.m_axes.set_xlabel(text)
+        elif data == "y":
+            text = self.yl_text.get_text()
+            self.m_axes.set_ylabel(text)
+            
+        self.update()
+    
+    def setLimits(self, widget, data):
+        
+        if data == "x":
+            if (self.xr_min.get_text() != "" and \
+                self.xr_max.get_text() != ""):
+                minval = float(self.xr_min.get_text())
+                maxval = float(self.xr_max.get_text())
+                self.m_axes.set_xlim(minval, maxval)
+        elif data == "y":
+            if (self.yr_min.get_text() != "" and \
+                self.yr_max.get_text() != ""):
+                minval = float(self.yr_min.get_text())
+                maxval = float(self.yr_max.get_text())
+                self.m_axes.set_ylim(minval, maxval)
+        
+        self.update()
+    
+    def update(self):
+        self.m_canvas.draw()
+        
+        
+
 
 class LaunderTypes:
 # Enum-like class to hold various constants
@@ -667,6 +827,8 @@ def getNextIndex(dictionary):
     return len(dictionary)
 
 if __name__ == "__main__":
+    #pe = PlotEditor(1)
+   #pe.main()
     app = App()
     #app = LoadCSVDialog("silica-fm-part.csv", LaunderTypes().f_part)
     app.main()
