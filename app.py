@@ -443,14 +443,15 @@ class PlotPane:
                
         # Create a scroller and plot list pane
         scroller = self.createPlotList()
-        box = gtk.HBox()
+        box = gtk.HBox(homogeneous=False)
         box.set_size_request(LaunderTypes.x_lv,LaunderTypes.y_lv)
-        box.add(scroller)
+        box.pack_start(scroller)
         self.m_main_vbox.pack_start(box, expand=False, \
                                     padding=LaunderTypes.m_pad)
-        #self.m_main_vbox.pack_start(scroller, expand=False, \
-         #                           padding=LaunderTypes.m_pad)
         
+        # Add the series controller
+        sidepane = SidePane(self)
+        box.pack_start(sidepane.vbox, expand=False)
 
     def createPlotList(self):
         # Create the liststore
@@ -589,13 +590,45 @@ class PlotPane:
             self.m_axes.lines.pop(0)
         self.m_axes.set_xlim(0,1)
         self.m_axes.set_ylim(0,1)
-        self.m_axes.set_xscale("linear")
-        self.m_axes.set_yscale("linear")
+        self.toggleLogAxis(self.m_b_logx_toggle, "x")
+        self.toggleLogAxis(self.m_b_logy_toggle, "y")
         self.m_canvas.draw()
         self.m_axes.set_autoscale_on(True)
         self.m_axes.autoscale_view(True,True,True)
 
-
+class SidePane:
+    # Pane for adding/removing individual series
+    
+    def __init__(self, plotpane):
+        self.m_plotpane = plotpane
+        
+        self.vbox = gtk.VBox()
+        
+        # Create the toolbar
+        self.m_toolbar = gtk.Toolbar()
+        self.m_toolbar.set_style(gtk.TOOLBAR_ICONS)
+        self.m_toolbar.set_orientation(gtk.ORIENTATION_VERTICAL)
+        self.vbox.add(self.m_toolbar)
+        
+        # Delete button
+        self.b_delete = gtk.ToolButton(gtk.STOCK_REMOVE)
+        self.b_delete.set_tooltip_text("Delete series")
+        self.m_toolbar.insert(self.b_delete, 0)
+        
+        # Add misc. series button
+        self.b_add    = gtk.ToolButton(gtk.STOCK_ADD)
+        self.b_add.set_tooltip_text("Add miscellaneous series")
+        self.m_toolbar.insert(self.b_add, 1)
+        
+        # Clear all series button
+    
+    def deleteSeries(self, widget, data=None):
+        # Deletes a series entry (or multiple)
+        
+        selection = self.m_plotpane.m_listview.get_selection()
+        
+        if selection != "":
+            print "zomg"
 
 class LaunderTypes:
 # Enum-like class to hold various constants
