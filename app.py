@@ -414,6 +414,9 @@ class PlotPane:
         # Initialise the list of series to be plotted
         self.m_series_dict = {}
         
+        # Series currently being plotted
+        self.m_plotted = {}
+        
         # Is the plot editor open?
         self.m_editOpen = False
         
@@ -489,14 +492,16 @@ class PlotPane:
     
     def createMPLCanvas(self):        
         # Create the figure
-        self.m_figure = Figure(figsize=(5,4), dpi=100)
+        #self.m_figure = Figure(figsize=(5,4), dpi=100)
+        self.m_figure = Figure()
         self.m_canvas = FigureCanvas(self.m_figure)
         self.initialisePlot()
     
     def initialisePlot(self):
+        self.m_plotted = {}
         self.m_axes = self.m_figure.add_subplot(111)
         self.m_axes.set_xlabel("time, s")
-        self.m_figure.subplots_adjust(bottom=0.15)
+        #self.m_figure.subplots_adjust(bottom=0.15)
         self.toggleLogAxis(self.m_b_logx_toggle, "x")
         self.toggleLogAxis(self.m_b_logy_toggle, "y")
         self.m_canvas.draw()
@@ -559,6 +564,14 @@ class PlotPane:
                 self.m_axes.set_yscale("linear")
                 self.m_canvas.draw()
     
+    def toggleCIs(self, widget, data):
+        # Activates plotting of CIs instead of averages
+        print("Not implemented yet")
+        if widget.get_active():
+            pass
+        else:
+            pass
+    
     def plotSelected(self, widget, data=None):
         # Plots the selected series on the itemlist
         selection = self.m_listview.get_selection()
@@ -582,7 +595,13 @@ class PlotPane:
                 lines = []
                 for id in id_list:
                     lines.append(self.plotSeries(self.m_series_dict[id]))
+                    self.m_plotted[id] = self.m_series_dict[id]
                     
+    def plotCIs(self, widget, data=None):
+        # Plots the CIs of a dictionary of series
+        
+        for id in data.keys():
+            pass
     
     def plotSeries(self, series):
         # Displays the selected series in the MPL figure
@@ -611,12 +630,13 @@ class PlotPane:
         # Removes the selected series from the list
         
         selection = self.m_listview.get_selection()
-        if selection != None:
-            (model, pathlist) = selection.get_selected()
+        
+        if selection.count_selected_rows() > 0:
+            (model, pathlist) = selection.get_selected_rows()
             
-            for path in pathlist:
-                print path
-                self.m_liststore.remove(path)
+            # Reverse doesn't seem to work?
+            for path in reversed(pathlist):
+                del self.m_liststore[path[0]]
         else:
             print("Nothing selected.")
     
@@ -824,7 +844,10 @@ def appendDict(dictionary, entry):
     dictionary[len(dictionary)] = entry
 
 def getNextIndex(dictionary):
-    return len(dictionary)
+    if len(dictionary) < 1:
+        return 0
+    else:
+        return max(dictionary.keys()) + 1
 
 if __name__ == "__main__":
     #pe = PlotEditor(1)
