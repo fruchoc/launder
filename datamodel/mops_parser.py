@@ -178,11 +178,15 @@ class MiscFileParser(Parser):
     def start(self, delimiter):
         
         # Read in the file.
-        (headers, data) = self.parse(delimiter)
+        try:
+            (headers, data) = self.parse(delimiter)
+        except:
+            print("Couldn't parse file")
+            return []
         
         results = []
         if len(headers) < 1:
-            print("Couldn't parse file.")
+            print("Error getting the headers!")
         else:
             fixed = self.convertData(data)
             
@@ -225,3 +229,38 @@ class MiscFileParser(Parser):
             return (headers, data)
         else:
             return ([], [])
+
+class PSLHeaderParser(Parser):
+    # Class for processing PSL files' headers
+    
+    def getHeaders(self):
+        print("Getting headers of file {0}".format(self.m_fname))
+        
+        # Get first line
+        csvline = self.m_istream.readline()
+        self.closeCSV()
+        line = self.getCSVLine(csvline, type('str'), ',')
+    
+        # Check the file format
+        if self.__checkForStandardFormat(line):
+            return line
+        else:
+            return None
+    
+    def __checkForStandardFormat(self, line):
+        # Given a list of headers from a csv file, check it is compatible
+        
+        ans = False
+        if (line[0] == "Weight"):
+            ans = True
+        else:
+            print("Unrecognised MOPS PSL file format.")
+            ans = False
+        return ans
+        
+
+class PSLParser(Parser):
+    # Class to parse MOPS psl files
+    
+    def start(self):
+        print 1

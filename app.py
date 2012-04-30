@@ -575,7 +575,7 @@ class PlotPane:
     def plotSelected(self, widget, data=None):
         # Plots the selected series on the itemlist
         selection = self.m_listview.get_selection()
-        if selection != None:
+        if selection.count_selected_rows() > 0:
             (model, pathlist) = selection.get_selected_rows()
             
             id_list = []
@@ -892,10 +892,8 @@ class LoadMiscFileDialog:
     
     def loadFile(self, widget, data=None):
         # Attempts to load and parse the selected file
-        text = self.getDelimiter()
-        print text
         parser = MParser.MiscFileParser(self.m_fname)
-        results = parser.start(text)
+        results = parser.start(self.getDelimiter())
         
         if len(results) > 0:
             self.m_pane.addSeries(results)
