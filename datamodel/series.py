@@ -26,7 +26,7 @@ class Series:
         self.m_xvalues = xseries
         self.m_yvalues = yseries
         
-        if not errors: 
+        if errors: 
             self.m_yerrors = errors
             self.m_lower_ci = []
             self.m_upper_ci = []

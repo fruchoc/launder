@@ -699,7 +699,7 @@ class SidePane:
     
     def addMiscSeries(self, widget, data=None):
         # Adds a miscellaneous series from a data file
-        print("Not implemented yet")
+        self.m_miscfile = LoadMiscFileDialog(self.m_plotpane)
     
     def clearAllSeries(self, widget, data=None):
         self.m_plotpane.clearSeries()
@@ -807,8 +807,102 @@ class PlotEditor:
     def update(self):
         self.m_canvas.draw()
         
+class LoadMiscFileDialog:
+    # Class for loading a miscellaneous DSV type file
+    
+    def destroy(self, widget, data=None):
+        self.m_window.destroy()
+    
+    def __init__(self, pane):
+        self.chooseFile(None, None)
+        self.m_results = []     # To be returned by the destroy()
+        self.m_pane    = pane
         
-
+        # Initialise a new window
+        self.m_window = gtk.Window()
+        self.m_window.connect("destroy", self.destroy)
+        #self.m_window.set_default_size(300,300)
+        self.m_window.set_title("Load {0}".format(self.m_fname))
+        
+        # Initialise a HBox for some padding
+        hbox = gtk.HBox(homogeneous=False)
+        self.m_window.add(hbox)
+        
+        # Initialise the main VBox for the system
+        vbox = gtk.VBox(homogeneous=False)
+        hbox.pack_start(vbox, padding = LaunderTypes.m_pad)
+        
+        label        = gtk.Label("DSV file properties")
+        vbox.pack_start(label)
+        
+        # Create a field for the delimiter
+        self.m_entry = gtk.Entry(5)
+        label        = gtk.Label("Delimiter: ")
+        hbox1        = gtk.HBox(homogeneous=False)
+        hbox1.pack_start(label, padding = LaunderTypes.m_pad)
+        hbox1.pack_start(self.m_entry, padding = LaunderTypes.m_pad)
+        vbox.pack_start(hbox1)
+        
+        # Create the load button
+        button       = gtk.Button("Load file")
+        button.connect("clicked", self.loadFile, None)
+        vbox.pack_start(button, padding = LaunderTypes.m_pad)
+        
+        self.m_window.show_all()
+        
+    def chooseFile(self, widget, data=None):
+        # Check PyGTK version
+        if gtk.pygtk_version < (2,3,90):
+           print("PyGtk 2.3.90 or later required!")
+           raise SystemExit
+        
+        dialog = gtk.FileChooserDialog("Select file or path..",
+                               None,
+                               gtk.FILE_CHOOSER_ACTION_OPEN,
+                               (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                                gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+        dialog.set_default_response(gtk.RESPONSE_OK)
+        
+        # Allow multiple files to be selected
+        dialog.set_select_multiple(False)
+        
+        # Add file filters to dialog
+        filter = gtk.FileFilter()
+        filter.set_name("All files")
+        filter.add_pattern("*")
+        dialog.add_filter(filter)
+        
+        # Now run the chooser!
+        fname = dialog.run()
+        
+        # Check the response
+        if fname == gtk.RESPONSE_OK:
+            self.m_fname = dialog.get_filename()
+        elif fname == gtk.RESPONSE_CANCEL:
+            print 'Closed, no files selected'
+        dialog.destroy()
+    
+    def getDelimiter(self):
+        text = self.m_entry.get_text()
+        if text == "\t":
+            text = "tab"
+        elif text == "":
+            text = "tab"
+        return text
+    
+    def loadFile(self, widget, data=None):
+        # Attempts to load and parse the selected file
+        text = self.getDelimiter()
+        print text
+        parser = MParser.MiscFileParser(self.m_fname)
+        results = parser.start(text)
+        
+        if len(results) > 0:
+            self.m_pane.addSeries(results)
+        else:
+            print("Error getting series from the parser.")
+        
+        self.destroy(None, None)
 
 class LaunderTypes:
 # Enum-like class to hold various constants

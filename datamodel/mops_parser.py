@@ -19,10 +19,11 @@ class Parser:
         self.m_istream.close()
     
     # Reads a CSV line and converts all to float or string
-    def getCSVLine(self, csvline, datatype):
+    def getCSVLine(self, csvline, datatype, delimiter):
         
         # Split on comma delimiter
-        line = csvline.split(',')
+        if delimiter == "tab": line = csvline.split()
+        else: line = csvline.split(delimiter)
         
         # Remove any \n characters
         cleanline = []
@@ -49,7 +50,7 @@ class HeaderParser(Parser):
         # Get first line
         csvline = self.m_istream.readline()
         self.closeCSV()
-        line = self.getCSVLine(csvline, type('str'))
+        line = self.getCSVLine(csvline, type('str'), ',')
         
         # Check the file format
         if self.__checkForStandardFormat(line):
@@ -134,7 +135,7 @@ class TrajectoryParser(Parser):
         lines = []
         headers = self.m_istream.readline()
         for csvline in self.m_istream:
-            line = self.getCSVLine(csvline, type(1.0))
+            line = self.getCSVLine(csvline, type(1.0), ',')
             lines.append(line)
         
         self.closeCSV()
@@ -169,3 +170,58 @@ class TrajectoryParser(Parser):
         # Given a list of data an index, return a list with only
         # values and errors
         return [datalist[index], datalist[index+1]]
+
+class MiscFileParser(Parser):
+    # Imports miscellaneous files into the system (e.g. DSV files)
+    # Assume file has headers
+    
+    def start(self, delimiter):
+        
+        # Read in the file.
+        (headers, data) = self.parse(delimiter)
+        
+        results = []
+        if len(headers) < 1:
+            print("Couldn't parse file.")
+        else:
+            fixed = self.convertData(data)
+            
+            # Generate series
+            results = []
+            for i in range(1, len(headers)):
+                newseries = series.Trajectory(headers[i], fixed[0], fixed[i])
+                results.append(newseries)
+        return results
+    
+    def convertData(self, data):
+        # Converts a list of rows to a list of columns
+        
+        # Create column list first
+        cols = []
+        for col in data[0]:
+            cols.append([])
+        
+        # Now loop over rows
+        for row in data:
+            for i in range(0, len(row)):
+                cols[i].append(row[i])
+        
+        return cols
+    
+    def parse(self, delimiter):
+        # Parses a misc. DSV file
+        
+        # First get headers
+        line = self.m_istream.readline()
+        headers = self.getCSVLine(line, type('str'), delimiter)
+        
+        # Parse file based on given delimiter
+        data = []
+        for csvline in self.m_istream:
+            data.append(self.getCSVLine(csvline, type(1.0), delimiter))
+        self.closeCSV()
+        
+        if len(data) > 0:
+            return (headers, data)
+        else:
+            return ([], [])
