@@ -62,8 +62,14 @@ class App:
                                     padding = LaunderTypes.m_pad)
         
         # Add the trajectory MPL PlotPane
-        self.m_trj_pane = PlotPane(self.m_window_main)
+        self.m_trj_pane = TrajectoryPane(self.m_window_main, \
+                                         "Trajectories", "time, s")
         self.m_hbox_main.pack_start(self.m_trj_pane.m_vbox,  \
+                                    padding = LaunderTypes.m_pad)
+        
+        self.m_psd_pane = PSDPane(self.m_window_main, \
+                                         "PSDs", "diameter, nm")
+        self.m_hbox_main.pack_start(self.m_psd_pane.m_vbox,  \
                                     padding = LaunderTypes.m_pad)
         
         self.m_window_main.show_all()
@@ -407,12 +413,13 @@ class PlotPane:
     # various other capabilities to enable rapid GUI-driven plots based 
     # on the list of series in the plot container.
     
-    def __init__(self, window):
+    def __init__(self, window, name, xlabel):
         # Must pass pointer to the main window reference, to allow MPL toolbar
         # to be properly initialised.
         
         # Initialise the list of series to be plotted
         self.m_series_dict = {}
+        self.m_xlDefaul    = xlabel
         
         # Series currently being plotted
         self.m_plotted = {}
@@ -431,7 +438,7 @@ class PlotPane:
         self.m_main_hbox.pack_start(self.m_main_vbox, padding=LaunderTypes.m_pad)
         #self.m_main_vbox.set_size_request(400,300)
         frame = gtk.Frame()
-        frame.set_label("MOPS trajectories")
+        frame.set_label(name)
         frame.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
         self.m_hbox.add(frame)
         frame.add(self.m_main_hbox)
@@ -461,26 +468,6 @@ class PlotPane:
         # Add the series controller
         sidepane = SidePane(self)
         box.pack_start(sidepane.vbox, expand=False)
-
-    def createPlotList(self):
-        # Create the liststore
-        # Create the scroller
-        scroller     = gtk.ScrolledWindow()
-        scroller.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
-        scroller.set_shadow_type(gtk.SHADOW_IN)
-        
-        # Use columns: param / unit / PlotAvg / PlotCI
-        self.m_liststore = gtk.ListStore(type(1), type("a"), type("a"))
-        self.m_listview  = gtk.TreeView(self.m_liststore)
-        self.m_listview.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
-        scroller.add_with_viewport(self.m_listview)
-        
-        # Create columns
-        self.addColumn("ID", 0) 
-        self.addColumn("Parameter", 1)
-        self.addColumn("Units", 2) 
-        
-        return scroller
     
     def addColumn(self, title, colID):
         col = gtk.TreeViewColumn(title, gtk.CellRendererText(), \
@@ -501,7 +488,7 @@ class PlotPane:
         self.m_plotted = {}
         self.m_axes = self.m_figure.add_subplot(111)
         self.m_axes.set_xlabel("time, s")
-        #self.m_figure.subplots_adjust(bottom=0.15)
+        self.m_figure.subplots_adjust(bottom=0.15)
         self.toggleLogAxis(self.m_b_logx_toggle, "x")
         self.toggleLogAxis(self.m_b_logy_toggle, "y")
         self.m_canvas.draw()
@@ -517,7 +504,6 @@ class PlotPane:
         self.m_b_plot_selection = gtk.Button("Plot selected")
         self.m_b_logx_toggle    = gtk.CheckButton("LogX?")
         self.m_b_logy_toggle    = gtk.CheckButton("LogY?")
-        self.m_b_toggle_cis     = gtk.CheckButton("Plot CIs?")
         self.m_b_editor         = gtk.Button("Edit plot")
         self.m_b_reset          = gtk.Button("Reset")
         
@@ -525,7 +511,6 @@ class PlotPane:
         self.m_b_plot_selection.set_tooltip_text("Plot the selected series")
         self.m_b_logx_toggle.set_tooltip_text("Toggle Log10 x scale")
         self.m_b_logy_toggle.set_tooltip_text("Toggle log10 y scale")
-        self.m_b_toggle_cis.set_tooltip_text("Toggle showing 99.9% CIs")
         self.m_b_editor.set_tooltip_text("Open the plot editor")
         self.m_b_reset.set_tooltip_text("Reset the plot")
         
@@ -540,7 +525,7 @@ class PlotPane:
         hbox.pack_start(self.m_b_plot_selection, expand=False)
         hbox.pack_start(self.m_b_logx_toggle, expand=False)
         hbox.pack_start(self.m_b_logy_toggle, expand=False)
-        hbox.pack_start(self.m_b_toggle_cis, expand=False)
+
         
         hbox.pack_end(self.m_b_reset, expand=False)
         hbox.pack_end(self.m_b_editor, expand=False)
@@ -564,13 +549,7 @@ class PlotPane:
                 self.m_axes.set_yscale("linear")
                 self.m_canvas.draw()
     
-    def toggleCIs(self, widget, data):
-        # Activates plotting of CIs instead of averages
-        print("Not implemented yet")
-        if widget.get_active():
-            pass
-        else:
-            pass
+
     
     def plotSelected(self, widget, data=None):
         # Plots the selected series on the itemlist
@@ -597,11 +576,6 @@ class PlotPane:
                     lines.append(self.plotSeries(self.m_series_dict[id]))
                     self.m_plotted[id] = self.m_series_dict[id]
                     
-    def plotCIs(self, widget, data=None):
-        # Plots the CIs of a dictionary of series
-        
-        for id in data.keys():
-            pass
     
     def plotSeries(self, series):
         # Displays the selected series in the MPL figure
@@ -659,6 +633,66 @@ class PlotPane:
             self.m_axes.lines.pop(0)
         self.m_figure.clear()
         self.initialisePlot()
+
+class TrajectoryPane(PlotPane):
+    
+    def createPlotList(self):
+        # Create the liststore
+        # Create the scroller
+        scroller     = gtk.ScrolledWindow()
+        scroller.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
+        scroller.set_shadow_type(gtk.SHADOW_IN)
+        
+        # Use columns: param / unit / PlotAvg / PlotCI
+        self.m_liststore = gtk.ListStore(type(1), type("a"), type("a"))
+        self.m_listview  = gtk.TreeView(self.m_liststore)
+        self.m_listview.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
+        scroller.add_with_viewport(self.m_listview)
+        
+        # Create columns
+        self.addColumn("ID", 0) 
+        self.addColumn("Parameter", 1)
+        self.addColumn("Units", 2) 
+        
+        return scroller
+    
+    def toggleCIs(self, widget, data):
+        # Activates plotting of CIs instead of averages
+        print("Not implemented yet")
+        if widget.get_active():
+            pass
+        else:
+            pass
+    
+    def plotCIs(self, widget, data=None):
+        # Plots the CIs of a dictionary of series
+        
+        for id in data.keys():
+            pass
+
+class PSDPane(PlotPane):
+    
+    def createPlotList(self):
+        # Create the liststore
+        # Create the scroller
+        scroller     = gtk.ScrolledWindow()
+        scroller.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
+        scroller.set_shadow_type(gtk.SHADOW_IN)
+        
+        # Use columns: param / unit / PlotAvg / PlotCI
+        self.m_liststore = gtk.ListStore(type(1), type("a"), type("a"))
+        self.m_listview  = gtk.TreeView(self.m_liststore)
+        self.m_listview.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
+        scroller.add_with_viewport(self.m_listview)
+        
+        # Create columns
+        self.addColumn("ID", 0) 
+        self.addColumn("Diam. Type", 1)
+        self.addColumn("h", 2)
+        self.addColumn("Parent", 3) 
+        
+        return scroller
+
 
 class SidePane:
     # Pane for adding/removing individual series
@@ -902,6 +936,14 @@ class LoadMiscFileDialog:
         
         self.destroy(None, None)
 
+
+class LoadPSLDialog:
+    # Class for loading MOPS PSL files.
+    
+    def destroy(self, widget, data=None):
+        self.m_window.destroy()
+
+
 class LaunderTypes:
 # Enum-like class to hold various constants
     f_psl    = 0
@@ -909,15 +951,15 @@ class LaunderTypes:
     f_chem   = 2
     f_part   = 3
     
-    # Global padding delcration
+    # Global padding declarations
     m_pad     = 5
     
-    # Window size request declrations
-    x_main      = 800
-    y_main      = 600
+    # Window size request declarations
+    x_main      = 1080
+    y_main      = 500
     
     # Listview default
-    x_lv        = int(x_main * 0.6)
+    x_lv        = int(x_main * 0.3)
     y_lv        = int(y_main * 0.2)
 
     
