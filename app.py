@@ -956,11 +956,11 @@ class LaunderTypes:
     
     # Window size request declarations
     x_main      = 1080
-    y_main      = 500
+    y_main      = 650
     
     # Listview default
     x_lv        = int(x_main * 0.3)
-    y_lv        = int(y_main * 0.2)
+    y_lv        = int(y_main * 0.25)
 
     
 def checkListOfStrings(stringlist):
