@@ -30,6 +30,7 @@ except:
 try:
     import datamodel.mops_parser as MParser
     import datamodel.series as Series
+    import datamodel.ensemble as Ensemble
 except:
     print("Couldn't find data model files!")
     sys.exit(4)
@@ -42,8 +43,8 @@ class App:
         
         # Initialise and connect signals
         self.m_window_main.connect("destroy", gtk.main_quit)
-        self.m_window_main.set_default_size(LaunderTypes.x_main,\
-                                            LaunderTypes.y_main)
+        self.m_window_main.set_default_size(Constants.x_main,\
+                                            Constants.y_main)
         self.m_window_main.set_title("Launder GTK+")
         
         # Create main vbox to hold toolbar and everything else
@@ -53,24 +54,24 @@ class App:
         # Create a hbox for some padding
         self.m_hbox_main = gtk.HBox(homogeneous=False)
         self.m_vbox_main.pack_start(self.m_hbox_main,  \
-                                    padding = LaunderTypes.m_pad)
+                                    padding = Constants.m_pad)
 
         
         # Add the control pane
         self.m_control_pane = ControlPane(self)
         self.m_hbox_main.pack_start(self.m_control_pane.m_vbox,  \
-                                    padding = LaunderTypes.m_pad)
+                                    padding = Constants.m_pad)
         
         # Add the trajectory MPL PlotPane
         self.m_trj_pane = TrajectoryPane(self.m_window_main, \
                                          "Trajectories", "time, s")
         self.m_hbox_main.pack_start(self.m_trj_pane.m_vbox,  \
-                                    padding = LaunderTypes.m_pad)
+                                    padding = Constants.m_pad)
         
         self.m_psd_pane = PSDPane(self.m_window_main, \
                                          "PSDs", "diameter, nm")
         self.m_hbox_main.pack_start(self.m_psd_pane.m_vbox,  \
-                                    padding = LaunderTypes.m_pad)
+                                    padding = Constants.m_pad)
         
         self.m_window_main.show_all()
         
@@ -85,7 +86,7 @@ class ControlPane:
         # Initialise empty variables
         self.m_auto_files = []
         self.m_selected_files = []
-        self.m_types = LaunderTypes()
+        self.m_types = Constants()
         self.m_app = app
         
         # Create main vbox for control pane
@@ -151,18 +152,18 @@ class ControlPane:
         #scroller.set_shadow_type(gtk.SHADOW_IN)
         scroller.add_with_viewport(self.m_file_tree_view)
         file_vbox.pack_start(scroller, \
-                                    padding = LaunderTypes.m_pad)
+                                    padding = Constants.m_pad)
         
         # Add buttons - load selected button
         self.m_button_loadfile = gtk.Button("Load selected")
         self.m_button_loadfile.connect("clicked",self.loadSelectedFile)
         file_vbox.pack_start(self.m_button_loadfile, expand=False, \
-                             padding = LaunderTypes.m_pad)
+                             padding = Constants.m_pad)
         # Add buttons - get stats button
         self.m_button_getstats = gtk.Button("Get statistics")
         #self.m_button_loadfile.connect("clicked",self.loadSelectedFile)
         file_vbox.pack_start(self.m_button_getstats, expand=False, \
-                             padding = LaunderTypes.m_pad)
+                             padding = Constants.m_pad)
         
     def chooseFile(self, data=None):
         # Check PyGTK version
@@ -246,7 +247,7 @@ class ControlPane:
             self.m_dialog = LoadCSVDialog(fname, filetype)
             self.m_dialog.m_window.connect("destroy", self.getLoadCSVDialogResults, )
         elif filetype == 0:
-            print("PSL file found. Processing not implemented yet.")
+            dialog = LoadPSLDialog(fname, self.m_app.m_psd_pane)
             return None
     
     def removeSelectedFile(self, widget):
@@ -298,7 +299,7 @@ class LoadCSVDialog:
     def __init__(self, fname, filetype):
         self.m_fname = fname    # Name of file to load
         self.m_ftype = filetype # Type of file to load
-        self.m_types = LaunderTypes()
+        self.m_types = Constants()
         self.m_results = []     # To be returned by the destroy()
         
         # Initialise a new window
@@ -314,12 +315,12 @@ class LoadCSVDialog:
         # Initialise the main VBox for the system
         self.m_vbox = gtk.VBox(homogeneous=False)
         self.m_hbox.pack_start(self.m_vbox, \
-                                    padding = LaunderTypes.m_pad)
+                                    padding = Constants.m_pad)
         
         # Add some text explaining what to do
         label1 = gtk.Label("Select the trajectories to load.")
         self.m_vbox.pack_start(label1,  expand=False, \
-                                    padding = LaunderTypes.m_pad)
+                                    padding = Constants.m_pad)
         
         # Generate the of trajectories
         self.makeTreeView()
@@ -331,11 +332,11 @@ class LoadCSVDialog:
         self.m_b_load_all      = gtk.Button("Load all")
         self.m_b_load_all.connect("clicked", self.getAllTrajectories, )
         self.m_b_hbox.pack_start(self.m_b_load_selected, expand=False,  \
-                                    padding = LaunderTypes.m_pad)
+                                    padding = Constants.m_pad)
         self.m_b_hbox.pack_start(self.m_b_load_all, expand=False,  \
-                                    padding = LaunderTypes.m_pad)
+                                    padding = Constants.m_pad)
         self.m_vbox.pack_start(self.m_b_hbox, fill=False, expand=False,  \
-                                    padding = LaunderTypes.m_pad)
+                                    padding = Constants.m_pad)
         
         # Show window
         self.m_window.show_all()
@@ -375,7 +376,7 @@ class LoadCSVDialog:
             scroller.add_with_viewport(self.m_l_view)
             
             self.m_vbox.pack_start(scroller, expand=True, fill=True,  \
-                                    padding = LaunderTypes.m_pad)
+                                    padding = Constants.m_pad)
     
     def getSelectedTrajectories(self, widget, data=None):
         # Returns a list of the indicies of the trajectories of interest
@@ -430,12 +431,12 @@ class PlotPane:
         # Initialise a h/vbox for storage of all the plot elements.
         self.m_vbox = gtk.VBox(homogeneous=False)
         self.m_hbox = gtk.HBox(homogeneous=False)
-        self.m_vbox.pack_start(self.m_hbox, padding=LaunderTypes.m_pad)
+        self.m_vbox.pack_start(self.m_hbox, padding=Constants.m_pad)
         
         # Create a frame to hold everything
         self.m_main_vbox = gtk.VBox(homogeneous=False)
         self.m_main_hbox = gtk.HBox()           # Hbox for padding
-        self.m_main_hbox.pack_start(self.m_main_vbox, padding=LaunderTypes.m_pad)
+        self.m_main_hbox.pack_start(self.m_main_vbox, padding=Constants.m_pad)
         #self.m_main_vbox.set_size_request(400,300)
         frame = gtk.Frame()
         frame.set_label(name)
@@ -452,7 +453,7 @@ class PlotPane:
         # Create the MPL toolbar
         self.m_mpl_toolbar = self.createMPLToolbar(self.m_canvas, window)
         self.m_main_vbox.pack_start(self.m_mpl_toolbar, expand=False)
-        self.m_main_vbox.pack_start(self.m_canvas, padding=LaunderTypes.m_pad)
+        self.m_main_vbox.pack_start(self.m_canvas, padding=Constants.m_pad)
         
         # Add the buttons after the plot
         self.m_main_vbox.pack_start(hbox, expand=False)
@@ -460,10 +461,10 @@ class PlotPane:
         # Create a scroller and plot list pane
         scroller = self.createPlotList()
         box = gtk.HBox(homogeneous=False)
-        box.set_size_request(LaunderTypes.x_lv,LaunderTypes.y_lv)
+        box.set_size_request(Constants.x_lv,Constants.y_lv)
         box.pack_start(scroller)
         self.m_main_vbox.pack_start(box, expand=False, \
-                                    padding=LaunderTypes.m_pad)
+                                    padding=Constants.m_pad)
         
         # Add the series controller
         sidepane = SidePane(self)
@@ -487,8 +488,9 @@ class PlotPane:
     def initialisePlot(self):
         self.m_plotted = {}
         self.m_axes = self.m_figure.add_subplot(111)
-        self.m_axes.set_xlabel("time, s")
+        self.m_axes.set_xlabel(self.m_xlDefaul)
         self.m_figure.subplots_adjust(bottom=0.15)
+        self.m_figure.subplots_adjust(left=0.15)
         self.toggleLogAxis(self.m_b_logx_toggle, "x")
         self.toggleLogAxis(self.m_b_logy_toggle, "y")
         self.m_canvas.draw()
@@ -567,8 +569,15 @@ class PlotPane:
                 unit_list.append(model[path[0]][2])
             
             if not checkListOfStrings(unit_list):
-                print("Wrong units being plotted on same axis!")
-                print("Nothing plotted.")
+                if type(unit_list[0]) == type(1.0):
+                    self.m_axes.set_ylabel("kernel density, 1/nm")
+                    lines = []
+                    for id in id_list:
+                        lines.append(self.plotSeries(self.m_series_dict[id]))
+                        self.m_plotted[id] = self.m_series_dict[id]
+                else:
+                    print("Wrong units being plotted on same axis!")
+                    print("Nothing plotted.")
             else:
                 self.m_axes.set_ylabel("parameter, {0}".format(unit_list[0]))
                 lines = []
@@ -680,7 +689,7 @@ class PSDPane(PlotPane):
         scroller.set_shadow_type(gtk.SHADOW_IN)
         
         # Use columns: param / unit / PlotAvg / PlotCI
-        self.m_liststore = gtk.ListStore(type(1), type("a"), type("a"))
+        self.m_liststore = gtk.ListStore(type(1), type("a"), type(1.0), type("a"))
         self.m_listview  = gtk.TreeView(self.m_liststore)
         self.m_listview.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
         scroller.add_with_viewport(self.m_listview)
@@ -760,9 +769,9 @@ class PlotEditor:
         self.m_window.add(box)
         
         padhbox = gtk.HBox()
-        box.pack_start(padhbox, padding=LaunderTypes.m_pad)
+        box.pack_start(padhbox, padding=Constants.m_pad)
         padvbox = gtk.VBox(homogeneous=False)
-        padhbox.pack_start(padvbox, padding=LaunderTypes.m_pad)
+        padhbox.pack_start(padvbox, padding=Constants.m_pad)
         
         (self.xl_text, xl_but, xl_box) = self.createButtonEntry("Set x label")
         padvbox.pack_start(xl_box, fill=False, expand=False)
@@ -798,12 +807,12 @@ class PlotEditor:
         label1 = gtk.Label("Min:")
         hbox.pack_start(label1)
         entry1 = gtk.Entry(10)
-        hbox.pack_start(entry1, expand=False, padding=LaunderTypes.m_pad)
+        hbox.pack_start(entry1, expand=False, padding=Constants.m_pad)
         
         label2 = gtk.Label("Max:")
         hbox.pack_start(label2)
         entry2 = gtk.Entry(10)
-        hbox.pack_start(entry2, expand=False, padding=LaunderTypes.m_pad)
+        hbox.pack_start(entry2, expand=False, padding=Constants.m_pad)
         
         button = gtk.Button("Set " + text + " limit")
         hbox.pack_start(button)
@@ -864,7 +873,7 @@ class LoadMiscFileDialog:
         
         # Initialise the main VBox for the system
         vbox = gtk.VBox(homogeneous=False)
-        hbox.pack_start(vbox, padding = LaunderTypes.m_pad)
+        hbox.pack_start(vbox, padding = Constants.m_pad)
         
         label        = gtk.Label("DSV file properties")
         vbox.pack_start(label)
@@ -873,14 +882,14 @@ class LoadMiscFileDialog:
         self.m_entry = gtk.Entry(5)
         label        = gtk.Label("Delimiter: ")
         hbox1        = gtk.HBox(homogeneous=False)
-        hbox1.pack_start(label, padding = LaunderTypes.m_pad)
-        hbox1.pack_start(self.m_entry, padding = LaunderTypes.m_pad)
+        hbox1.pack_start(label, padding = Constants.m_pad)
+        hbox1.pack_start(self.m_entry, padding = Constants.m_pad)
         vbox.pack_start(hbox1)
         
         # Create the load button
         button       = gtk.Button("Load file")
         button.connect("clicked", self.loadFile, None)
-        vbox.pack_start(button, padding = LaunderTypes.m_pad)
+        vbox.pack_start(button, padding = Constants.m_pad)
         
         self.m_window.show_all()
         
@@ -942,9 +951,154 @@ class LoadPSLDialog:
     
     def destroy(self, widget, data=None):
         self.m_window.destroy()
+    
+    def __init__(self, fname, psdpane):
+        self.m_fname = fname    # Name of file to load
+        self.m_pane = psdpane   # Reference of PSD pane
+        self.m_results = []     # To be returned by the destroy()
+        
+        # Initialise a new window
+        self.m_window = gtk.Window()
+        self.m_window.connect("destroy", self.destroy, )
+        self.m_window.set_default_size(300,200)
+        self.m_window.set_title("Load {0}".format(self.m_fname))
+        
+        # Initialise a HBox for some padding
+        hbox = gtk.HBox(homogeneous=False)
+        self.m_window.add(hbox)
+        
+        # Initialise the main VBox for the system
+        self.m_vbox = gtk.VBox(homogeneous=False)
+        hbox.pack_start(self.m_vbox, \
+                                    padding = Constants.m_pad)
+        
+        # Add some text explaining what to do
+        label1 = gtk.Label("Select the diameter types to load.")
+        self.m_vbox.pack_start(label1,  expand=False, \
+                                    padding = Constants.m_pad)
+        
+        self.generateDiamEntries()
+        
+        self.m_loadSelected = gtk.Button("Load selected")
+        self.m_loadSelected.connect("clicked", self.loadSelected, None)
+        self.m_vbox.pack_start(self.m_loadSelected, \
+                               expand=False, fill=False, padding=2)
 
+        # Show window
+        self.m_window.show_all()
+    
+    def loadSelected(self, widget, data=None):
+        # Load the selected series
+        
+        # First identify which entries are selected.
+        results = []
+        i = 0
+        for button, entry in zip(self.m_dCheck, self.m_dHEntry):
+            if button.get_active():
+                active = self.m_cols[i]
+                active += [self.getH(entry, None)]
+                results.append(active)
+            i += 1
+        
+        if len(results) < 1: 
+            print("Nothing selected!")
+        else:
+            # Now need to parser the file and get the relevant series
+            parser = MParser.PSLParser(self.m_fname)
+            parsed = parser.start(results)
+            
+            if len(parsed) < 1:
+                print("Failure trying to get parsed data.")
+                self.destroy(None, None)
+             
+            # Call the ensemble object to create ensembles
+            allseries = []
+            for sets in parsed[1:]:
+                ens = Ensemble.KernelDensity(sets[2], parsed[0], sets[1])
+                consts = Constants()
+                series = Series.PSD(consts.matchDiam(sets[0]), ens.mesh,\
+                                        ens.psd)
+                series.setH(ens.smoothing)
+                series.setParent(self.m_fname)
+                series.setType(sets[0], Constants())
+                allseries.append(series)
+            
+            # Now send the series to the plotpane!
+            self.m_pane.addSeries(allseries)
+            
+            # Kill the window now
+            self.destroy(None, None)
+        
+    
+    def generateDiamEntries(self):
+        # Calls the parser to see which diameter types are present
+        # adds their entry to the load pane
+        
+        parser = MParser.PSLHeaderParser(self.m_fname)
+        line = parser.getHeaders()
+        if line != None:
+            self.m_cols = parser.scanForDiameters(line, Constants)
+        
+        self.m_dHEntry = []
+        self.m_dCheck  = []
+        
+        for item in self.m_cols:
+            dtype = item[0]
+            colid = item[1]
+            
+            hbox = self.makeDiamEntry(dtype)
+            self.m_vbox.pack_start(hbox, expand=False,
+                                   padding=Constants.m_pad)
+        
+        del parser
+    
+    def makeDiamEntry(self, dtype):
+        
+        hbox = gtk.HBox(homogeneous=False)
+        const = Constants()
+        label = gtk.Label(const.matchDiam(dtype) + " diameter")
+        hbox.pack_start(label)
+        
+        label = gtk.Label("h:")
+        entry = gtk.Entry(6)
+        entry.set_text("auto")
+        entry.set_width_chars(6)
+        hbox.pack_start(label, expand=False)
+        hbox.pack_start(entry, expand=False, padding=5)
+        
+        label = gtk.Label("load?")
+        check = gtk.CheckButton()
+        if (dtype == Constants.d_mob or dtype == Constants.d_sph):
+            check.set_active(False)
+        else:
+            check.set_active(True)
+        hbox.pack_start(label, expand=False)
+        hbox.pack_start(check, expand=False)
+        
+        # Store useful variables in lists
+        self.m_dHEntry.append(entry)
+        self.m_dCheck.append(check)
+        
+        return hbox
+    
+    def getH(self, widget, data=None):
+        # Gets the scaling factor from a widget
+        h = -1
+        text = widget.get_text()
+        if (text == "auto" or text == "*" or \
+            text == "def"): h = -1
+        else:
+            try:
+                h = float(text)
+            except:
+                h = -1
+        return h
+    
+    def main(self):
+        gtk.main()
+    
 
-class LaunderTypes:
+class Constants:
 # Enum-like class to hold various constants
     f_psl    = 0
     f_rates  = 1
@@ -956,12 +1110,24 @@ class LaunderTypes:
     
     # Window size request declarations
     x_main      = 1080
-    y_main      = 650
+    y_main      = 500
     
     # Listview default
     x_lv        = int(x_main * 0.3)
-    y_lv        = int(y_main * 0.25)
-
+    y_lv        = int(y_main * 0.2)
+    
+    # diameter types
+    d_sph   = 0
+    d_mob   = 1
+    d_col   = 2
+    d_pri   = 3
+    
+    def matchDiam(self, i):
+        if i == 0: return "Spherical"
+        elif i == 1: return "Mobility"
+        elif i == 2: return "Collision"
+        elif i == 3: return "Primary"
+        else: return "ERROR"
     
 def checkListOfStrings(stringlist):
     # Checks if all the elements of a list are identical.
@@ -984,10 +1150,8 @@ def getNextIndex(dictionary):
         return max(dictionary.keys()) + 1
 
 if __name__ == "__main__":
-    #pe = PlotEditor(1)
-   #pe.main()
+    #app = LoadPSLDialog("silica-fm-psl(1s).csv")
     app = App()
-    #app = LoadCSVDialog("silica-fm-part.csv", LaunderTypes().f_part)
     app.main()
     
 
