@@ -251,16 +251,63 @@ class PSLHeaderParser(Parser):
         # Given a list of headers from a csv file, check it is compatible
         
         ans = False
-        if (line[0] == "Weight"):
+        if (re.search("Weight", line[0])):
             ans = True
         else:
             print("Unrecognised MOPS PSL file format.")
             ans = False
         return ans
+    
+    def scanForDiameters(self, line, consts):
+        
+        dsph = 0
+        dmob = 0
+        dcol = 0
+        dpri = 0
+        
+        i=0
+        for col in line:
+            if re.search("Equiv. Sphere Diameter", col): dsph=i
+            elif re.search("Mobility Diameter", col): dmob=i
+            elif re.search("Collision Diameter", col): dcol=i
+            elif re.search("Primary Diameter", col): dpri=i
+            elif re.search("primary diameter", col): dpri=i
+            i += 1
+        
+        return ([consts.d_sph, dsph], 
+                [consts.d_mob, dmob], 
+                [consts.d_col, dcol], 
+                [consts.d_pri, dpri])
         
 
 class PSLParser(Parser):
     # Class to parse MOPS psl files
     
-    def start(self):
-        print 1
+    def start(self, parsedata):
+        self.m_parseinfo = parsedata
+        
+        # Read headers
+        headers = self.m_istream.readline()
+
+        weight = []
+        diameters = []
+        for i in range(0, len(self.m_parseinfo)):
+            diameters.append([])
+        
+        # Read in and store the columns
+        for csvline in self.m_istream:
+            line = self.getCSVLine(csvline, type(1.0), ",")
+            weight.append(line[0])
+            
+            for i in range(0, len(self.m_parseinfo)):
+                diameters[i].append(line[self.m_parseinfo[i][1]])
+        
+        self.closeCSV()
+        
+        results = [weight]
+        for i in range(0, len(self.m_parseinfo)):
+            item = [self.m_parseinfo[i][0], self.m_parseinfo[i][2], \
+                    diameters[i]]
+            results.append(item)
+            
+        return results

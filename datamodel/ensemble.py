@@ -6,7 +6,7 @@ PI = 3.141592653589793
 
 class KernelDensity:
     # Default constructor
-    def __init__(self, diameters, weights):
+    def __init__(self, diameters, weights, bandwidth):
         # The KDE object it initialised with a list of diameters and weights
         # from the calling Ensemble class.
         
@@ -24,7 +24,8 @@ class KernelDensity:
         self.upperbound = (1 + self.bound_multiplier) * max(self.diameters)
         
         # Calculate ensemble statistics
-        self.smoothing = self.getBandwidth()
+        if bandwidth < 0: self.smoothing = self.getBandwidth()
+        else: self.smoothing = bandwidth
         
         # Make the mesh for the PSD
         self.mesh = self.makeMesh(self.num_points, self.lowerbound, self.upperbound)
@@ -47,7 +48,7 @@ class KernelDensity:
         if self.kerneltype == "Gaussian":
             # Check that ensemble stats have already been found.
             if (not hasattr(self, 'astdev')):
-                self.calculateEnsembleStats()
+                self.calculateEnsembleStats(self.diameters, self.weights)
             
             return (1.06 * self.astdev * pow(len(self.diameters), -(1.0/5.0)))
         else:

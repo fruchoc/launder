@@ -58,3 +58,19 @@ class Trajectory(Series):
     def getPlotPaneList(self):
         item = [self.m_name, self.m_unit]
         return item
+
+class PSD(Series):
+    
+    def setType(self, type, consts):
+        self.m_type = consts.matchDiam(type)
+    
+    def setH(self, h):
+        # Sets the bandwidth of the PSD
+        self.m_h = h
+    
+    def setParent(self, parent):
+        self.m_parent = parent
+    
+    def getPlotPaneList(self):
+        item = [self.m_type, self.m_h, self.m_parent]
+        return item
