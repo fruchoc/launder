@@ -3,6 +3,8 @@
 import sys
 import glob
 import re
+import getopt
+import os
 
 # Import pygtk and gtk packages.
 # obtain for any platform at http://www.pygtk.org
@@ -14,23 +16,12 @@ except:
     print("Couldn't find pygtk or gtk.")
     sys.exit(1)
 
-# Import key matplotlib objects
-# obtain at http://sourceforge.net/projects/matplotlib/
-try:
-    from matplotlib.figure import Figure
-    from matplotlib.backends.backend_gtkagg \
-        import FigureCanvasGTKAgg as FigureCanvas
-    from matplotlib.backends.backend_gtkagg \
-        import NavigationToolbar2GTKAgg as NavToolbar
-except:
-    print("Couldn't find matplotlib dependencies.")
-    sys.exit(2)
-
 # Import data model files
 try:
     import datamodel.mops_parser as MParser
     import datamodel.series as Series
     import datamodel.ensemble as Ensemble
+    import program.command as Cmd
 except:
     print("Couldn't find data model files!")
     sys.exit(4)
@@ -1132,7 +1123,9 @@ class Constants:
 def checkListOfStrings(stringlist):
     # Checks if all the elements of a list are identical.
     if len(stringlist) < 2:
+        if type(stringlist[0]) == type(1.0): return False
         return True
+        
     else:
         val = stringlist[0]
         ans = True
@@ -1149,10 +1142,63 @@ def getNextIndex(dictionary):
     else:
         return max(dictionary.keys()) + 1
 
+def head():
+    print("Launder GTK+")
+    print("(c) William Menz (wjm34) 2012")
+
+def usage():
+    print("\nUSAGE:")
+    print("(none)            load GUI")
+    print("-d <arg>          change to directory")
+    print("-h, --help:       print usage")
+    print("-p, --psl <arg>   postprocess PSL file")
+
 if __name__ == "__main__":
-    #app = LoadPSLDialog("silica-fm-psl(1s).csv")
-    app = App()
-    app.main()
+    head()
+    # Will load the GUI if this is true
+    guiMode = True
+    
+    try:
+        opts, args = getopt.getopt(sys.argv[1:],\
+                                   "h:d:p:",["help", "psl="]) 
+    except getopt.GetoptError:
+        usage()
+        sys.exit(1)
+    for opt, arg in opts:
+        if opt in ["-h", "--help"]:      
+            usage()
+            sys.exit()
+        elif opt == "-d":
+            rundir = arg
+            print("Changing to directory {0}.".format(rundir))
+            os.chdir(rundir)
+        elif opt in ["-p", "--psl"]:
+            fname = arg
+            print("Postprocessing file {0}".format(fname))
+            guiMode = False
+        else:
+            usage()
+            sys.exit(2)
+        
+    if guiMode:
+        
+        # Import key matplotlib objects
+        # obtain at http://sourceforge.net/projects/matplotlib/
+        try:
+            from matplotlib.figure import Figure
+            from matplotlib.backends.backend_gtkagg \
+                import FigureCanvasGTKAgg as FigureCanvas
+            from matplotlib.backends.backend_gtkagg \
+                import NavigationToolbar2GTKAgg as NavToolbar
+        except:
+            print("Couldn't find matplotlib dependencies.")
+            sys.exit(2)
+        
+        app = App()
+        app.main()
+    else:
+        print("Entering non-GUI mode.")
+        cmd = Cmd.Command(fname, Constants())
     
 
 print "Goodbye!"
