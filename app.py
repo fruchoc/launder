@@ -5,6 +5,7 @@ import glob
 import re
 import getopt
 import os
+from itertools import cycle
 
 # Import pygtk and gtk packages.
 # obtain for any platform at http://www.pygtk.org
@@ -412,6 +413,7 @@ class PlotPane:
         # Initialise the list of series to be plotted
         self.m_series_dict = {}
         self.m_xlDefaul    = xlabel
+        self.m_styles      = PlotStyles()
         
         # Series currently being plotted
         self.m_plotted = {}
@@ -580,7 +582,8 @@ class PlotPane:
     def plotSeries(self, series):
         # Displays the selected series in the MPL figure
         line = self.m_axes.plot(series.m_xvalues, series.m_yvalues, \
-                         label=series.m_name)
+                         self.m_styles.getNextStyle(), label=series.m_name)
+        #line[0].set_picker(True)
         self.m_axes.set_autoscale_on(True)
         self.m_axes.legend(loc=0, prop={'size':10})
         self.m_canvas.draw()
@@ -1119,7 +1122,15 @@ class Constants:
         elif i == 2: return "Collision"
         elif i == 3: return "Primary"
         else: return "ERROR"
+
+class PlotStyles:
+    styles = ["-", "--", "-.", ":"]
     
+    cycler = cycle(styles)
+    
+    def getNextStyle(self):
+        return next(self.cycler)
+
 def checkListOfStrings(stringlist):
     # Checks if all the elements of a list are identical.
     if len(stringlist) < 2:
