@@ -1040,9 +1040,10 @@ class LoadPSLDialog:
             dtype = item[0]
             colid = item[1]
             
-            hbox = self.makeDiamEntry(dtype)
-            self.m_vbox.pack_start(hbox, expand=False,
-                                   padding=Constants.m_pad)
+            if colid > 0:
+                hbox = self.makeDiamEntry(dtype)
+                self.m_vbox.pack_start(hbox, expand=False,
+                                       padding=Constants.m_pad)
         
         del parser
     
@@ -1104,11 +1105,11 @@ class Constants:
     
     # Window size request declarations
     x_main      = 1080
-    y_main      = 500
+    y_main      = 650
     
     # Listview default
     x_lv        = int(x_main * 0.3)
-    y_lv        = int(y_main * 0.2)
+    y_lv        = int(y_main * 0.3)
     
     # diameter types
     d_sph   = 0
