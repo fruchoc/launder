@@ -3,17 +3,6 @@
 Series class is holds information about a series ready for plotting.
 """
 
-# Import pygtk and gtk packages.
-# obtain for any platform at http://www.pygtk.org
-try:
-    import pygtk
-    pygtk.require('2.0')
-    import gtk
-except:
-    print("Couldn't find pygtk or gtk.")
-    sys.exit(1)
-
-
 class Series:
     def __init__(self, name, xseries, yseries, errors=None):
         # Initialise a series with xy values. Optional errors argument

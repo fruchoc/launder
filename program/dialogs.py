@@ -20,7 +20,7 @@ try:
     import datamodel.series as Series
     import datamodel.ensemble as Ensemble
 except:
-    print("Couldn't find other sources for" + os.path.dirname(__file__))
+    print("Couldn't find other sources for " + os.path.abspath( __file__ ))
     sys.exit(4)
 
 class LoadCSVDialog:
