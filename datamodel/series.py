@@ -52,6 +52,35 @@ class Series:
         print self.m_name, self.m_unit
         for x, y in zip(self.m_xvalues, self.m_yvalues):
             print x, y
+    
+    def getYatX(self, xval=None, tol=1.0e-6):
+        # Gets the corresponding yvalue for a given xvalue
+        # no argument returns the last 
+        
+        if xval == None: return self.m_yvalues[len(self.m_yvalues)-1]
+        else:
+            
+            row = 0
+            i = 0
+            for x in self.m_xvalues:
+                if abs(x-xval)/x < tol: row = i
+                i += 1
+            return self.m_yvalues[row]
+
+    def getEatX(self, xval=None, tol=1.0e-6):
+        # Gets the corresponding yerror for a given xvalue
+        # no argument returns the last 
+        
+        if xval == None: return self.m_yerrors[len(self.m_yerrors)-1]
+        else:
+            
+            row = 0
+            i = 0
+            for x in self.m_xvalues:
+                if abs(x-xval)/x < tol: row = i
+                i += 1
+            return self.m_yerrors[row]
+
 
 class Trajectory(Series):
     

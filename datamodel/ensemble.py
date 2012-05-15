@@ -211,7 +211,7 @@ class KernelDensity:
         # First calculate the means...
         for d, w in zip(self.diameters, self.weights):
             asum += (d * w)
-            gsum += math.pow(d, w*p)
+            gsum *= math.pow(d, w*p)
         
         self.damean = asum / sum(self.weights)
         self.dgmean = gsum

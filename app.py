@@ -7,16 +7,6 @@ import getopt
 import os
 from itertools import cycle
 
-# Import pygtk and gtk packages.
-# obtain for any platform at http://www.pygtk.org
-try:
-    import pygtk
-    pygtk.require('2.0')
-    import gtk
-except:
-    print("Couldn't find pygtk or gtk.")
-    sys.exit(1)
-
 # Import data model files
 try:
     import datamodel.mops_parser as MParser
@@ -230,7 +220,7 @@ class ControlPane:
         else:
             fname = selection[0].get_value(selection[1], 0)
         
-        filetype = self.checkForKnownFile(fname)
+        filetype = checkForKnownFile(fname)
         if filetype < 0:
             print("Unknown file! Deleting from list.")
             self.m_file_tree_store.remove(selection[1])
@@ -250,13 +240,6 @@ class ControlPane:
         else:
             self.m_file_tree_store.remove(selection[1])
     
-    def checkForKnownFile(self, fname):
-        # Checks that the filename is of a known type, returns the type
-        if re.search("-psl", fname): return self.m_types.f_psl
-        elif re.search("-chem.csv", fname): return self.m_types.f_chem
-        elif re.search("-part-rates.csv", fname): return self.m_types.f_rates
-        elif re.search("-part.csv", fname): return self.m_types.f_part
-        else: return -1
 
     def getLoadCSVDialogResults(self, widget, data=None):
         # Returns the results from the loadCSV class
@@ -994,6 +977,10 @@ class LoadPSLDialog:
                 results.append(active)
             i += 1
         
+        # Data passed to the PSL parser has the form:
+        # [[Const id, Column id, bandwidth], ..]
+        # Note -1 bandwidth gives automatic calculation.
+        
         if len(results) < 1: 
             print("Nothing selected!")
         else:
@@ -1145,6 +1132,14 @@ def checkListOfStrings(stringlist):
             if val != item: ans = False
         return ans
 
+def checkForKnownFile(fname):
+    # Checks that the filename is of a known type, returns the type
+    if re.search("-psl", fname): return Constants.f_psl
+    elif re.search("-chem.csv", fname): return Constants.f_chem
+    elif re.search("-part-rates.csv", fname): return Constants.f_rates
+    elif re.search("-part.csv", fname): return Constants.f_part
+    else: return -1
+
 def appendDict(dictionary, entry):
     dictionary[len(dictionary)] = entry
 
@@ -1162,17 +1157,20 @@ def usage():
     print("\nUSAGE:")
     print("(none)            load GUI")
     print("-d <arg>          change to directory")
-    print("-h, --help:       print usage")
-    print("-p, --psl <arg>   postprocess PSL file")
+    print("-h, --help        print usage")
+    print("-i, --input <arg> postprocess specific file")
+    print("-x, --xml <arg>   write statistics to XML file")
 
 if __name__ == "__main__":
     head()
     # Will load the GUI if this is true
-    guiMode = True
+    guiMode  = True
+    xmlOut   = False
     
     try:
         opts, args = getopt.getopt(sys.argv[1:],\
-                                   "h:d:p:",["help", "psl="]) 
+                                   "hd:p:i:x:",\
+                                   ["help", "input=", "xml="]) 
     except getopt.GetoptError:
         usage()
         sys.exit(1)
@@ -1184,15 +1182,29 @@ if __name__ == "__main__":
             rundir = arg
             print("Changing to directory {0}.".format(rundir))
             os.chdir(rundir)
-        elif opt in ["-p", "--psl"]:
+        elif opt in ["-i", "--input"]:
             fname = arg
-            print("Postprocessing file {0}".format(fname))
+            print("Postprocessing file {0}.".format(fname))
             guiMode = False
+        elif opt in ["-x", "--xml"]:
+            xmlOut   = str(arg)
         else:
             usage()
             sys.exit(2)
         
     if guiMode:
+        
+        if xmlOut: print("Warning: XML out unsupported in GUI mode.")
+        
+        # Import pygtk and gtk packages.
+        # obtain for any platform at http://www.pygtk.org
+        try:
+            import pygtk
+            pygtk.require('2.0')
+            import gtk
+        except:
+            print("Couldn't find pygtk or gtk.")
+            sys.exit(1)
         
         # Import key matplotlib objects
         # obtain at http://sourceforge.net/projects/matplotlib/
@@ -1210,7 +1222,24 @@ if __name__ == "__main__":
         app.main()
     else:
         print("Entering non-GUI mode.")
-        cmd = Cmd.Command(fname, Constants())
+        
+        ftype = checkForKnownFile(fname)
+        if ftype == Constants.f_psl:
+            cmd = Cmd.PSLCommand(fname, Constants())
+            cmd.start()
+            
+            if xmlOut: cmd.writeXML(xmlOut)
+            
+        elif ftype == Constants.f_chem or \
+                ftype == Constants.f_part or \
+                ftype == Constants.f_rates:
+            cmd = Cmd.TrajectoryCommand(fname, Constants())
+            cmd.start()
+            
+            if xmlOut: cmd.writeXML(xmlOut)
+            
+        else:
+            print("Unrecognised file type input.")
     
 
 print "Goodbye!"
