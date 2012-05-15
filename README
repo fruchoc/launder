@@ -1,0 +1,44 @@
+******************************************************************************
+LAUNDER GTK+
+A postprocessing and plotting suite for dealing with the output files from 
+MOPS calculations
+
+(c) William Menz (wjm34) 2012
+
+******************************************************************************
+OVERVIEW
+Launder GTK+ can either be run as a graphical user interface (GUI) or at 
+command line with certain runtime flags. It is ideal for rapidly visualising
+the results of a MOPS calculation and producing publication-quality results.
+
+******************************************************************************
+REQUIREMENTS
+Currently, the GUI has the following dependencies:
+Python: version 2.7+ (may operate under 2.6, but untested)
+Matplotlib: version 1.0.0+
+Pygtk: version 2.0+
+GTK: unsure, possibly 2.24.0+
+
+The system has been tested under both Ubuntu 10.04+ and Windows 7
+
+******************************************************************************
+INSTALLATION
+The repository is currently located on Github. Read and write access can be 
+obtained by pulling: git@github.com:fruchoc/launder.git
+or with: git://github.com/fruchoc/launder.git
+
+Pygtk and GTK installation instructions are given at:
+http://www.pygtk.org/downloads.html
+
+Matplotlib can be obtained at:
+http://matplotlib.sourceforge.net/
+Note it is quite sensitive to your version of Python installed.
+
+******************************************************************************
+RUNNING
+The GUI can be run by simply typing at command line
+python app.py
+
+A file can be postprocessed into XML or DSV summaries using the instructions
+given when typing:
+python app.py --help
