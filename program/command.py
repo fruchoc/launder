@@ -92,6 +92,8 @@ class PSLCommand(Command):
         parser.write1("/output", [])
         
         parser.close()
+        
+        return parser
 
 class TrajectoryCommand(Command):
     # Parses trajectories and writes to a file
@@ -143,3 +145,5 @@ class TrajectoryCommand(Command):
         parser.write1("/output", [])
         
         parser.close()
+        
+        return parser

@@ -4,16 +4,26 @@ The output interface for writing text files from the main program
 (c) William Menz (wjm34) 2012
 """
 
+import sys
+
 class Output:
+    
+    def getData(self):
+        return self.m_data
     
     def __init__(self, fname):
         self.m_fname    = fname
-        try:
-            print("Opening {0} for writing.".format(self.m_fname))
-            self.m_ostream  = open(self.m_fname, 'w')
-        except:
-            print("Couldn't open {0} for writing.".format(self.m_fname))
-            raise
+        self.m_data     = ""
+        
+        if self.m_fname != None:
+            try:
+                print("Opening {0} for writing.".format(self.m_fname))
+                self.m_ostream  = open(self.m_fname, 'w')
+            except:
+                print("Couldn't open {0} for writing.".format(self.m_fname))
+                raise
+        else:
+            self.m_ostream = sys.stdout
     
     def close(self):
         print("Closing file {0}".format(self.m_fname))
@@ -52,12 +62,14 @@ class XMLOut(Output):
         string = ""
         string += self.indent(tabs)
         string += self.node(text, attribs, endchar)
+        self.m_data += string
         self.m_ostream.write(string)
     
     def write2(self, param, value, tabs=0):
         string = ""
         string += self.indent(tabs)
         string += self.short(param, value)
+        self.m_data += string
         self.m_ostream.write(string)
     
     def indent(self, tabs):

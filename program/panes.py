@@ -168,7 +168,7 @@ class ControlPane:
                              padding = self.m_types.m_pad)
         # Add buttons - get stats button
         self.m_button_getstats = gtk.Button("Get statistics")
-        #self.m_button_loadfile.connect("clicked",self.loadSelectedFile)
+        self.m_button_getstats.connect("clicked",self.getStats, None)
         file_vbox.pack_start(self.m_button_getstats, expand=False, \
                              padding = self.m_types.m_pad)
         
@@ -265,7 +265,18 @@ class ControlPane:
         else:
             self.m_file_tree_store.remove(selection[1])
     
-
+    def getStats(self, widget, data=None):
+        # Gets the XML statistics of the file
+        
+        selection = self.m_file_tree_view.get_selection().get_selected()
+        if selection[1] == None:
+            print("Nothing selected!")
+            return None
+        else:
+            fname = selection[0].get_value(selection[1], 0)
+        
+        dialog = Dlg.GetStatsDialog(fname, self.m_types)
+    
     def getLoadCSVDialogResults(self, widget, data=None):
         # Returns the results from the loadCSV class
         results = self.m_dialog.m_results

@@ -19,6 +19,7 @@ try:
     import datamodel.mops_parser as MParser
     import datamodel.series as Series
     import datamodel.ensemble as Ensemble
+    import program.command as Cmd
 except:
     print("Couldn't find other sources for " + os.path.abspath( __file__ ))
     sys.exit(4)
@@ -388,3 +389,74 @@ class LoadPSLDialog:
             except:
                 h = -1
         return h
+
+class GetStatsDialog:
+    """
+    Dialog box giving the XML output of a given input file, just
+    as if the program was called via command line interface
+    """
+    
+    def destroy(self, widget, data=None):
+        self.m_window.destroy()
+    
+    def __init__(self, fname, consts):
+        
+        self.m_fname = fname    # Name of file to load
+        self.m_consts  = consts # Reference to contants
+        
+        # Initialise a new window
+        self.m_window = gtk.Window()
+        self.m_window.connect("destroy", self.destroy, )
+        self.m_window.set_default_size(400,300)
+        self.m_window.set_title("Stats of {0}".format(self.m_fname))
+        
+        # Initialise a HBox for some padding
+        hbox = gtk.HBox(homogeneous=False)
+        self.m_window.add(hbox)
+        
+        # Initialise the main VBox for the system
+        self.m_vbox = gtk.VBox(homogeneous=False)
+        hbox.pack_start(self.m_vbox, \
+                                    padding = self.m_consts.m_pad)
+        
+        # Add some text explaining what to do
+        label1 = gtk.Label("XML output")
+        self.m_vbox.pack_start(label1,  expand=False, \
+                                    padding = self.m_consts.m_pad)
+        
+        text  = gtk.Label(self.getLabelText(self.m_fname))
+        text.set_selectable(True)
+        text.set_line_wrap_mode(True)
+        
+        scroller = gtk.ScrolledWindow()
+        scroller.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
+        scroller.set_shadow_type(gtk.SHADOW_IN)
+        scroller.add_with_viewport(text)
+        
+        self.m_vbox.pack_start(scroller, expand=True, fill=True, \
+                               padding = self.m_consts.m_pad)
+        
+        self.m_window.show_all()
+
+    def getLabelText(self, fname):
+        # Gets the XML-formatted text for the label.
+        ftype = self.m_consts.checkForKnownFile(fname)
+        if ftype == self.m_consts.f_psl:
+            cmd = Cmd.PSLCommand(fname, self.m_consts)
+            cmd.start()
+            
+            parser = cmd.writeXML(None)
+            
+        elif ftype == self.m_consts.f_chem or \
+                ftype == self.m_consts.f_part or \
+                ftype == self.m_consts.f_rates:
+            cmd = Cmd.TrajectoryCommand(fname, self.m_consts)
+            cmd.start()
+            
+            parser = cmd.writeXML(None)
+        
+        data = parser.getData()
+        del parser
+        del cmd
+        
+        return data
