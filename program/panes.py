@@ -134,12 +134,14 @@ class ControlPane:
         file_frame.set_label("Simulation info")
         file_frame.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
         file_vbox = gtk.VBox(homogeneous=False)
+        hbox      = gtk.HBox(homogeneous=False)
+        hbox.pack_start(file_vbox, padding = self.m_types.m_pad)
         
         # Add the file list pane
         label = gtk.Label("Available files")
         label.set_justify(gtk.JUSTIFY_LEFT)
         file_vbox.pack_start(label, fill=False, expand=False)
-        file_frame.add(file_vbox)
+        file_frame.add(hbox)
         self.m_vbox.pack_start(file_frame)
         
         # Set up the file tree view
