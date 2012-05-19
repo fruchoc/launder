@@ -85,6 +85,12 @@ class XMLOut(Output):
 
 class DSVOut(Output):
     
+    def head(self, items, delimiter):
+        # Writes the header of a file
+        string = self.line(items, delimiter, None)
+        self.m_data += string
+        if self.m_write: self.m_ostream.write(string)
+    
     def line(self, items, delimiter, fmt=None):
         # Gets a line of DSV based on items list
         code = "{0"
@@ -96,5 +102,13 @@ class DSVOut(Output):
             string += code.format(i) 
             if j != len(items)-1: string += str(delimiter)
             j += 1
+        string += "\n"
         
         return string
+    
+    def write(self, items, delimiter, fmt=None):
+        # Writes a DSV fline
+        
+        string = self.line(items, delimiter, fmt)
+        self.m_data += string
+        if self.m_write: self.m_ostream.write(string)

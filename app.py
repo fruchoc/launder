@@ -55,20 +55,23 @@ def usage():
     print("-h, --help        print usage")
     print("-i, --input <arg> postprocess specific file")
     print("-x, --xml <arg>   write statistics to XML file")
+    print("-p, --psd <arg>   write PSDs from a PSL file (CSV format)")
 
 if __name__ == "__main__":
     head()
     # Will load the GUI if this is true
     guiMode  = True
     xmlOut   = False
+    psdOut   = False
     
     try:
         opts, args = getopt.getopt(sys.argv[1:],\
-                                   "hd:p:i:x:",\
-                                   ["help", "input=", "xml="]) 
+                                   "hd:i:p:x:",\
+                                   ["help", "input=", "psd=", "xml="]) 
     except getopt.GetoptError:
         usage()
         sys.exit(1)
+    
     for opt, arg in opts:
         if opt in ["-h", "--help"]:      
             usage()
@@ -81,15 +84,19 @@ if __name__ == "__main__":
             fname = arg
             print("Postprocessing file {0}.".format(fname))
             guiMode = False
+        elif opt in ["-p", "--psd"]:
+            psdOut   = str(arg)
         elif opt in ["-x", "--xml"]:
             xmlOut   = str(arg)
         else:
+            print("Unrecognised option {0}".format(opt))
             usage()
             sys.exit(2)
         
     if guiMode:
         
         if xmlOut: print("Warning: XML out unsupported in GUI mode.")
+        if psdOut: print("Warning: PSD out unsupported in GUI mode.")
         
         # Import panes
         try:
@@ -117,6 +124,7 @@ if __name__ == "__main__":
             cmd.start()
             
             if xmlOut: cmd.writeXML(xmlOut)
+            if psdOut: cmd.writePSDs(psdOut, ",")
             
         elif ftype == consts.f_chem or \
                 ftype == consts.f_part or \

@@ -94,6 +94,43 @@ class PSLCommand(Command):
         parser.close()
         
         return parser
+    
+    def writePSDs(self, oname, delimiter=","):
+        # Writes all PSDs for a given file
+        # One file per PSD.
+        
+        for data, ens in zip(self.m_parseddata, self.m_ensembles):
+            fname = self.fileName(oname, self.m_consts.matchDiam(data[0]))
+            self.writePSD(fname, ens, delimiter)
+    
+    def fileName(self, oname, ftype):
+        # Generates a filename of the form oname.ftype.ext
+        splitted = oname.split(".")
+        string = oname
+        if len(splitted) > 1:
+            (f, b) = splitted
+            string = f
+            string += "." + ftype.lower()
+            string += "." + b
+        else:
+            string = oname
+            string += "." + ftype.lower()
+        return string
+    
+    def writePSD(self, oname, ensemble, delimiter=","):
+        # Writes a PSD as a DSV file. Only writes one at a time in case
+        # different meshes are used.
+        
+        parser = Out.DSVOut(oname)
+        
+        parser.head(["diameter", "density", "cumulative"], delimiter)
+        
+        for d, r, c in zip(ensemble.mesh, ensemble.psd, \
+                           ensemble.cumulative_psd):
+            parser.write([d, r, c], delimiter, None)
+        
+        parser.close()
+        return parser
 
 class TrajectoryCommand(Command):
     # Parses trajectories and writes to a file
