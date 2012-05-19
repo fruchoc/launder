@@ -14,6 +14,7 @@ class Output:
     def __init__(self, fname):
         self.m_fname    = fname
         self.m_data     = ""
+        self.m_write    = True
         
         if self.m_fname != None:
             try:
@@ -23,11 +24,12 @@ class Output:
                 print("Couldn't open {0} for writing.".format(self.m_fname))
                 raise
         else:
-            self.m_ostream = sys.stdout
+            self.m_write = False
     
     def close(self):
-        print("Closing file {0}".format(self.m_fname))
-        self.m_ostream.close()
+        if self.m_write:
+            print("Closing file {0}".format(self.m_fname))
+            self.m_ostream.close()
 
 class XMLOut(Output):
     m_tab   = "  "  # Tab spacing characters
@@ -35,7 +37,8 @@ class XMLOut(Output):
     
     def head(self):
         string = self.node("?xml", [["version", "1.0"]], "?")
-        self.m_ostream.write(string)
+        self.m_data += string
+        if self.m_write: self.m_ostream.write(string)
     
     def node(self, text, attribs=[], endchar=""):
         # Gets a text string element of XML
@@ -63,14 +66,14 @@ class XMLOut(Output):
         string += self.indent(tabs)
         string += self.node(text, attribs, endchar)
         self.m_data += string
-        self.m_ostream.write(string)
+        if self.m_write: self.m_ostream.write(string)
     
     def write2(self, param, value, tabs=0):
         string = ""
         string += self.indent(tabs)
         string += self.short(param, value)
         self.m_data += string
-        self.m_ostream.write(string)
+        if self.m_write: self.m_ostream.write(string)
     
     def indent(self, tabs):
         # Writes a certain number of indents

@@ -419,14 +419,24 @@ class GetStatsDialog:
         hbox.pack_start(self.m_vbox, \
                                     padding = self.m_consts.m_pad)
         
+        
         # Add some text explaining what to do
         label1 = gtk.Label("XML output")
-        self.m_vbox.pack_start(label1,  expand=False, \
+        hbox = gtk.HBox(homogeneous=False)
+        self.m_vbox.pack_start(hbox,  expand=False, \
                                     padding = self.m_consts.m_pad)
+        hbox.pack_start(label1)
         
-        text  = gtk.Label(self.getLabelText(self.m_fname))
+        # Add the button to save a file
+        button = gtk.Button("Save file")
+        button.connect("clicked", self.saveFile, None)
+        hbox.pack_start(button, expand=False, fill=False)
+        
+        self.m_data = self.getLabelText(self.m_fname)
+        text  = gtk.Label(self.m_data)
         text.set_selectable(True)
         text.set_line_wrap_mode(True)
+        text.set_justify(gtk.JUSTIFY_LEFT)
         
         scroller = gtk.ScrolledWindow()
         scroller.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
@@ -460,3 +470,53 @@ class GetStatsDialog:
         del cmd
         
         return data
+    
+    def saveFile(self, widget, data=None):
+        fname = self.chooseFile()
+        
+        if fname != None:
+            print("File {0} saved.".format(fname))
+            fstr = open(fname, 'w')
+            fstr.write(self.m_data)
+            fstr.close()
+    
+    def chooseFile(self):
+        # Check PyGTK version
+        if gtk.pygtk_version < (2,3,90):
+           print("PyGtk 2.3.90 or later required!")
+           raise SystemExit
+        
+        dialog = gtk.FileChooserDialog("Select file or path..",
+                               None,
+                               gtk.FILE_CHOOSER_ACTION_SAVE,
+                               (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                                gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+        dialog.set_default_response(gtk.RESPONSE_OK)
+        
+        # Allow multiple files to be selected
+        dialog.set_select_multiple(False)
+        
+        # Add file filters to dialog
+        filter = gtk.FileFilter()
+        filter.set_name("XML files")
+        filter.add_pattern("*.xml")
+        dialog.add_filter(filter)
+        
+        filter = gtk.FileFilter()
+        filter.set_name("All files")
+        filter.add_pattern("*")
+        dialog.add_filter(filter)
+        
+        # Now run the chooser!
+        fname = dialog.run()
+        
+        # Check the response
+        if fname == gtk.RESPONSE_OK:
+            filename = dialog.get_filename()
+        elif fname == gtk.RESPONSE_CANCEL:
+            print 'Closed, no files selected'
+            filename = None
+        
+        dialog.destroy()
+        
+        return filename
