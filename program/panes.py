@@ -35,6 +35,7 @@ try:
     import datamodel.series as Series
     import datamodel.ensemble as Ensemble
     import program.dialogs as Dlg
+    import program.output as Out
 except:
     print("Couldn't find other sources for " + os.path.abspath( __file__ ))
     sys.exit(4)
@@ -539,6 +540,85 @@ class PlotPane:
             self.m_axes.lines.pop(0)
         self.m_figure.clear()
         self.initialisePlot()
+    
+    def chooseSaveFile(self):
+        # Check PyGTK version
+        if gtk.pygtk_version < (2,3,90):
+           print("PyGtk 2.3.90 or later required!")
+           raise SystemExit
+       
+        dialog = gtk.FileChooserDialog("Select file or path..",
+                               None,
+                               gtk.FILE_CHOOSER_ACTION_SAVE,
+                               (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                                gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+        dialog.set_default_response(gtk.RESPONSE_OK)
+        
+        # Allow multiple files to be selected
+        dialog.set_select_multiple(False)
+        
+        # Add file filters to dialog
+        filter = gtk.FileFilter()
+        filter.set_name("DSV files")
+        filter.add_pattern("*.csv")
+        filter.add_pattern("*.dat")
+        filter.add_pattern("*.dsv")
+        dialog.add_filter(filter)
+        
+        filter = gtk.FileFilter()
+        filter.set_name("All files")
+        filter.add_pattern("*")
+        dialog.add_filter(filter)
+        
+        # Now run the chooser!
+        fname = dialog.run()
+        
+        # Check the response
+        if fname == gtk.RESPONSE_OK:
+            filename = dialog.get_filename()
+        elif fname == gtk.RESPONSE_CANCEL:
+            print 'Saving file cancelled!'
+            filename = None
+        
+        dialog.destroy()
+        
+        return filename
+    
+    def setDelimiter(self, widget, data=None):
+        # Sets the delimiter when saving files.
+        print 1
+    
+    def saveSeries(self):
+        # Saves the selected series
+        
+        selection = self.m_listview.get_selection()
+        if selection.count_selected_rows() > 0:
+            (model, pathlist) = selection.get_selected_rows()
+            
+            id_list = []
+            name_list = []
+            
+            for path in pathlist:
+                id_list.append(model[path[0]][0])
+                name_list.append(model[path[0]][1])
+            
+            # Loop over all series to save them as a separate file
+            for id in id_list:
+
+                # Call file saver dialog
+                oname = self.chooseSaveFile()
+                if oname != None:
+                    print("Saving file " + oname)
+                    
+                    parser = Out.DSVOut(oname)
+                    data = self.m_series_dict[id].getOutputData()
+                    parser.parseData(data, ",")
+                    parser.close()
+                    
+                else:
+                    print("File saving cancelled.")
+        else:
+            print "Nothing selected."
 
 class TrajectoryPane(PlotPane):
     
@@ -632,6 +712,12 @@ class SidePane:
         b_clear.connect("clicked", self.clearAllSeries, )
         toolbar.insert(b_clear, 2)
         
+        # Save selected series button
+        b_save  = gtk.ToolButton(gtk.STOCK_SAVE)
+        b_save.set_tooltip_text("Save selected series")
+        b_save.connect("clicked", self.saveSeries, )
+        toolbar.insert(b_save, 3)
+        
     
     def deleteSeries(self, widget, data=None):
         # Deletes a series entry (or multiple)
@@ -639,12 +725,14 @@ class SidePane:
     
     def addMiscSeries(self, widget, data=None):
         # Adds a miscellaneous series from a data file
-        self.m_miscfile = Dlg.LoadMiscFileDialog(self.m_plotpane, self.m_plotpane.m_consts)
+        Dlg.LoadMiscFileDialog(self.m_plotpane, self.m_plotpane.m_consts)
     
     def clearAllSeries(self, widget, data=None):
         self.m_plotpane.clearSeries()
 
-
+    def saveSeries(self, widget, data=None):
+        # Saves the selected series, defer to plotpane.
+        self.m_plotpane.saveSeries()
 
 class PlotEditor:
     # A class to edit the properties of a MPL plot in a PlotPane.

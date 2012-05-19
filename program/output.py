@@ -85,6 +85,17 @@ class XMLOut(Output):
 
 class DSVOut(Output):
     
+    def parseData(self, data, delimiter=","):
+        # Parses a block of data into a DSV file.
+        # Assume form [[headers], [line1], [line2]...]
+        
+        # Write header
+        self.head(data[0], delimiter)
+        
+        for line in data[1:]:
+            self.write(line, delimiter, None)
+            
+    
     def head(self, items, delimiter):
         # Writes the header of a file
         string = self.line(items, delimiter, None)
