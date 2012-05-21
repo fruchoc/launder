@@ -123,8 +123,11 @@ if __name__ == "__main__":
             cmd = Cmd.PSLCommand(fname, consts)
             cmd.start()
             
-            if xmlOut: cmd.writeXML(xmlOut)
-            if psdOut: cmd.writePSDs(psdOut, ",")
+            if cmd.m_allowOutput:
+                if xmlOut: cmd.writeXML(xmlOut)
+                if psdOut: cmd.writePSDs(psdOut, ",")
+            else:
+                print("No ensembles could be loaded.")
             
         elif ftype == consts.f_chem or \
                 ftype == consts.f_part or \

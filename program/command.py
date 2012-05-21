@@ -21,6 +21,9 @@ class PSLCommand(Command):
     # Command-line interface for postprocessing PSL files
     
     def start(self):
+        # Initialise output writing
+        self.m_allowOutput = True
+        
         
         # Parse the headers to see what is there!
         parser = MParser.PSLHeaderParser(self.m_fname)
@@ -48,9 +51,14 @@ class PSLCommand(Command):
         self.m_ensembles = []
         for sets in parsed[1:]:
             ens = Ensemble.KernelDensity(sets[2], parsed[0], sets[1])
-            ens.calculateCumulativePSD()
-            ens.calculatePSDStats()
-            self.m_ensembles.append(ens)
+            if len(ens.diameters) > 0:
+                ens.calculateCumulativePSD()
+                ens.calculatePSDStats()
+                self.m_ensembles.append(ens)
+        
+        if len(self.m_ensembles) < 1:
+            # Block output if there were no ensembles added.
+            self.m_allowOutput = False
         
     def writeXML(self, oname):
         # Write the ensembles to XML!
