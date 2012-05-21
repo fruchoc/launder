@@ -10,30 +10,63 @@ class KernelDensity:
         # The KDE object it initialised with a list of diameters and weights
         # from the calling Ensemble class.
         
-        self.diameters = diameters
-        self.weights = weights
-        
-        # Default properties of KDE curve
+        if len(diameters) < 1:
+            print("No particles found for analysis.")
+            self.__initialiseZeroEnsemble()
+
+        else:
+            self.diameters = diameters
+            self.weights = weights
+            
+            # Default properties of KDE curve
+            self.__defaultKDE()
+            
+            if len(diameters) == 1:
+                print("Warning: only one particle found in the PSL!")
+                self.astdev = 0.0
+                self.gstdev = 1.0
+                
+                self.damean = diameters[0]
+                self.dgmean = self.damean
+                self.dmode = self.damean
+                self.d10 = self.damean
+                self.d50 = self.damean
+                self.d90 = self.damean
+                
+                # Initialise the bounds
+                self.lowerbound = (1 - self.bound_multiplier) * self.damean
+                self.upperbound = (1 + self.bound_multiplier) * self.damean
+                self.mesh = self.makeMesh(self.num_points, self.lowerbound, self.upperbound)
+                self.psd  = self.calculatePSD(self.diameters, self.weights)
+                
+            else:
+                # Set the default bounds of the PSD
+                self.lowerbound = (1 - self.bound_multiplier) * min(self.diameters)
+                self.upperbound = (1 + self.bound_multiplier) * max(self.diameters)
+                
+                # Calculate ensemble statistics
+                if bandwidth < 0: self.smoothing = self.getBandwidth()
+                else: self.smoothing = bandwidth
+                
+                # Make the mesh for the PSD
+                self.mesh = self.makeMesh(self.num_points, self.lowerbound, self.upperbound)
+                
+                # Create the PSD
+                self.psd  = self.calculatePSD(self.diameters, self.weights)
+    
+    def __initialiseZeroEnsemble(self):
+        # Initialises the ensemble as an empty object if there are no particles
+        # passed as arguments.
+        self.diameters = []
+        self.weights = []
+    
+    def __defaultKDE(self):
+        # Initialises the default kernel density properties.
         self.bound_multiplier = 0.4     # percentage above/below max/min diameters
         self.smoothing = 1.0            # 'h' factor for smoothing PSD
         self.kerneltype = "Gaussian"    # type of kernel
         self.num_points = 64            # number of points needed for PSD (multiple of 2)
-        
-        # Set the default bounds of the PSD
-        self.lowerbound = (1 - self.bound_multiplier) * min(self.diameters)
-        self.upperbound = (1 + self.bound_multiplier) * max(self.diameters)
-        
-        # Calculate ensemble statistics
-        if bandwidth < 0: self.smoothing = self.getBandwidth()
-        else: self.smoothing = bandwidth
-        
-        # Make the mesh for the PSD
-        self.mesh = self.makeMesh(self.num_points, self.lowerbound, self.upperbound)
-        
-        # Create the PSD
-        self.psd  = self.calculatePSD(self.diameters, self.weights)
-        
-
+    
     # Set the lower bound of the estimated PSD
     def setLowerBound(self, lowerbound):
         self.lowerbound = lowerbound

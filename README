@@ -25,7 +25,7 @@ The system has been tested under both Ubuntu 10.04+ and Windows 7
 INSTALLATION
 The repository is currently located on Github. Read and write access can be 
 obtained by pulling: git@github.com:fruchoc/launder.git
-or with: git://github.com/fruchoc/launder.git
+or read-only with: git://github.com/fruchoc/launder.git
 
 Pygtk and GTK installation instructions are given at:
 http://www.pygtk.org/downloads.html
@@ -42,3 +42,8 @@ python app.py
 A file can be postprocessed into XML or DSV summaries using the instructions
 given when typing:
 python app.py --help
+e.g. getting an XML summary of a PSL file's PSDs:
+python app.py -i "silicon-psl(1s).csv" -x out.xml
+
+NOTE: the quotation marks are needed when command-line arguments have 
+parentheses.

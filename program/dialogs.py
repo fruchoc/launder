@@ -312,15 +312,19 @@ class LoadPSLDialog:
             allseries = []
             for sets in parsed[1:]:
                 ens = Ensemble.KernelDensity(sets[2], parsed[0], sets[1])
-                series = Series.PSD(self.m_consts.matchDiam(sets[0]), ens.mesh,\
-                                        ens.psd)
-                series.setH(ens.smoothing)
-                series.setParent(self.m_fname)
-                series.setType(sets[0], self.m_consts)
-                allseries.append(series)
+                
+                if len(ens.diameters) > 0:
+                    
+                    series = Series.PSD(self.m_consts.matchDiam(sets[0]), ens.mesh,\
+                                            ens.psd)
+                    series.setH(ens.smoothing)
+                    series.setParent(self.m_fname)
+                    series.setType(sets[0], self.m_consts)
+                    allseries.append(series)
             
             # Now send the series to the plotpane!
-            self.m_pane.addSeries(allseries)
+            if len(allseries) > 0:
+                self.m_pane.addSeries(allseries)
             
             # Kill the window now
             self.destroy(None, None)
