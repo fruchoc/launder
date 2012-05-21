@@ -4,6 +4,7 @@ import sys
 import getopt
 import os
 import re
+import glob
 
 class Constants:
 # Enum-like class to hold various constants
@@ -46,6 +47,30 @@ class Constants:
         elif re.search("-part.csv", fname): return self.f_part
         else: return -1
 
+def autoFind():
+    # Function to automatically find the most recent PSL file for
+    # postprocessing (useful for MoDS)
+    psllist  = glob.glob("*psl*.csv")
+    psltimes = []
+    
+    if len(psllist) > 0:
+        for psl in psllist:
+            psltimes.append(pslTime(psl))
+        index = psltimes.index(max(psltimes))
+        print(str(len(psllist)) + " PSLs found. Using file " + psllist[index])
+        return psllist[index]
+    else:
+        print("No PSL files found.")
+        return None
+    
+def pslTime(fname):
+    # Parses the time of PSL file.
+    foo = fname.split("(")
+    foo = foo[1].split(")")
+    foo = foo[0].split("s")
+    foo = float(foo[0].strip())
+    return(foo)
+
 def head():
     print("Launder GTK+")
     print("(c) William Menz (wjm34) 2012")
@@ -53,6 +78,7 @@ def head():
 def usage():
     print("\nUSAGE:")
     print("(none)            load GUI")
+    print("-a                automagically find PSL file in directory")
     print("-d <arg>          change to directory")
     print("-h, --help        print usage")
     print("-i, --input <arg> postprocess specific file")
@@ -70,8 +96,8 @@ if __name__ == "__main__":
     
     try:
         opts, args = getopt.getopt(sys.argv[1:],\
-                                   "hd:i:p:x:",\
-                                   ["help", "input=", "psd=", "xml="]) 
+                                   "ahd:i:p:x:",\
+                                   ["auto", "help", "input=", "psd=", "xml="]) 
     except getopt.GetoptError:
         usage()
         sys.exit(1)
@@ -80,13 +106,16 @@ if __name__ == "__main__":
         if opt in ["-h", "--help"]:      
             usage()
             sys.exit()
+        elif opt in ["-a", "--auto"]:
+            fname = autoFind()
+            if fname == None: sys.exit(1)
+            guiMode = False
         elif opt == "-d":
             rundir = arg
             print("Changing to directory {0}.".format(rundir))
             os.chdir(rundir)
         elif opt in ["-i", "--input"]:
             fname = arg
-            print("Postprocessing file {0}.".format(fname))
             guiMode = False
         elif opt in ["-p", "--psd"]:
             psdOut   = str(arg)
@@ -123,6 +152,7 @@ if __name__ == "__main__":
         
         consts = Constants()
         ftype = consts.checkForKnownFile(fname)
+        print("Postprocessing file {0}.".format(fname))
         if ftype == consts.f_psl:
             cmd = Cmd.PSLCommand(fname, consts)
             cmd.start()
