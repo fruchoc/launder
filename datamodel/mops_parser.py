@@ -175,7 +175,7 @@ class MiscFileParser(Parser):
     # Imports miscellaneous files into the system (e.g. DSV files)
     # Assume file has headers
     
-    def start(self, delimiter):
+    def start(self, delimiter, flag, consts):
         
         # Read in the file.
         try:
@@ -193,8 +193,18 @@ class MiscFileParser(Parser):
             # Generate series
             results = []
             for i in range(1, len(headers)):
-                newseries = series.Trajectory(headers[i], fixed[0], fixed[i])
-                results.append(newseries)
+                if flag == 1:
+                    newseries = series.Trajectory(headers[i], fixed[0], fixed[i])
+                    results.append(newseries)
+                elif flag == 2:
+                    newseries = series.PSD(headers[i], fixed[0], fixed[i])
+                    newseries.setType(consts.d_imp, consts)
+                    newseries.setParent(self.m_fname)
+                    newseries.setH(0.0)
+                    results.append(newseries)
+                else:
+                    print("Unrecognised series flag.")
+                    raise SystemExit
         return results
     
     def convertData(self, data):
@@ -212,15 +222,45 @@ class MiscFileParser(Parser):
         
         return cols
     
+    def checkForHeaders(self, hline, delimiter):
+        # Indicates whether the file has headers
+        hasHeaders = False
+        line = []
+        
+        try:
+            # Assume there are characters if a float conversion fails
+            if delimiter == "tab":
+                splitline = hline.split()
+            else:
+                splitline = hline.split(delimiter)
+            
+            float(splitline[0])
+            line = self.getCSVLine(hline, type(1.0), delimiter)
+            
+        except:
+            # Okay, we got an error trying to convert to float.
+            # It must be some sort of character.
+            hasHeaders = True
+            line = self.getCSVLine(hline, type('str'), delimiter)
+        return (hasHeaders, line)
+    
     def parse(self, delimiter):
         # Parses a misc. DSV file
         
         # First get headers
         line = self.m_istream.readline()
-        headers = self.getCSVLine(line, type('str'), delimiter)
+        (hasHeaders, hline) = self.checkForHeaders(line, delimiter)
+        
+        data = []
+        headers = []
+        if hasHeaders:
+            headers = hline
+        else:
+            data.append(hline)
+            for i in range(0, len(hline)): headers.append("import")
         
         # Parse file based on given delimiter
-        data = []
+        
         for csvline in self.m_istream:
             data.append(self.getCSVLine(csvline, type(1.0), delimiter))
         self.closeCSV()

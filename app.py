@@ -28,12 +28,14 @@ class Constants:
     d_mob   = 1
     d_col   = 2
     d_pri   = 3
+    d_imp   = 4
     
     def matchDiam(self, i):
         if i == 0: return "Spherical"
         elif i == 1: return "Mobility"
         elif i == 2: return "Collision"
         elif i == 3: return "Primary"
+        elif i == 4: return "Imported"
         else: return "ERROR"
         
     def checkForKnownFile(self, fname):

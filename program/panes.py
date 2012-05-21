@@ -309,6 +309,8 @@ class PlotPane:
     # various other capabilities to enable rapid GUI-driven plots based 
     # on the list of series in the plot container.
     
+    m_sType = 0 # Type indicating whether it takes trajectories or series
+    
     def __init__(self, window, name, consts, xlabel):
         # Must pass pointer to the main window reference, to allow MPL toolbar
         # to be properly initialised.
@@ -622,6 +624,8 @@ class PlotPane:
 
 class TrajectoryPane(PlotPane):
     
+    m_sType = 1
+    
     def createPlotList(self):
         # Create the liststore
         # Create the scroller
@@ -657,6 +661,8 @@ class TrajectoryPane(PlotPane):
             pass
 
 class PSDPane(PlotPane):
+    
+    m_sType = 2
     
     def createPlotList(self):
         # Create the liststore

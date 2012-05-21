@@ -227,8 +227,8 @@ class LoadMiscFileDialog:
     def loadFile(self, widget, data=None):
         # Attempts to load and parse the selected file
         parser = MParser.MiscFileParser(self.m_fname)
-        results = parser.start(self.getDelimiter())
-        
+        results = parser.start(self.getDelimiter(), self.m_pane.m_sType, self.m_consts)
+
         if len(results) > 0:
             self.m_pane.addSeries(results)
         else:
