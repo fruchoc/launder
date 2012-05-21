@@ -59,6 +59,8 @@ def usage():
 
 if __name__ == "__main__":
     head()
+    exitVal  = 0    # value to exit program with
+    
     # Will load the GUI if this is true
     guiMode  = True
     xmlOut   = False
@@ -91,7 +93,7 @@ if __name__ == "__main__":
         else:
             print("Unrecognised option {0}".format(opt))
             usage()
-            sys.exit(2)
+            exitVal = 1
         
     if guiMode:
         
@@ -103,7 +105,7 @@ if __name__ == "__main__":
             import program.panes as Panes
         except:
             print("Couldn't find data model files!")
-            sys.exit(4)
+            exitVal = 2
         
         app = Panes.App(Constants())
         app.main()
@@ -115,7 +117,7 @@ if __name__ == "__main__":
             import program.command as Cmd
         except:
             print("Couldn't find data model files!")
-            sys.exit(4)
+            exitVal = 3
         
         consts = Constants()
         ftype = consts.checkForKnownFile(fname)
@@ -128,6 +130,7 @@ if __name__ == "__main__":
                 if psdOut: cmd.writePSDs(psdOut, ",")
             else:
                 print("No ensembles could be loaded.")
+                exitVal = 4
             
         elif ftype == consts.f_chem or \
                 ftype == consts.f_part or \
@@ -139,6 +142,8 @@ if __name__ == "__main__":
             
         else:
             print("Unrecognised file type input.")
+            exitVal = 5
     
 
 print "Goodbye!"
+sys.exit(exitVal)
