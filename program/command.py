@@ -29,7 +29,11 @@ class PSLCommand(Command):
         parser = MParser.PSLHeaderParser(self.m_fname)
         line = parser.getHeaders()
         if line != None:
-            self.m_parseddata = parser.scanForDiameters(line, self.m_consts)
+            parseddata = parser.scanForDiameters(line, self.m_consts)
+            self.m_parseddata = []
+            # Hide zero col id entries (i.e. not found in PSL) from the parser
+            for data in parseddata:
+                if data[1] != 0: self.m_parseddata.append(data)
         else:
             print("Couldn't parse headers")
             sys.exit(4)
