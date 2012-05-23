@@ -913,6 +913,12 @@ class PlotEditor:
         
         label = gtk.Label("colour:")
         hbox.pack_start(label, expand=False, fill=False)
+        combo = gtk.combo_box_new_text()
+        for i in PlotStyles.colours:
+            combo.append_text(i)
+        combo.set_active(self.getColourIndex(line))
+        hbox.pack_start(combo, expand=False, fill=False)
+        
         
         return hbox
     
@@ -930,6 +936,14 @@ class PlotEditor:
         s = line.get_ls()
         if s in PlotStyles.styles:
             index = PlotStyles.styles.index(s)
+        return index
+    
+    def getColourIndex(self, line):
+        # Gets the index of the line's style
+        index = -1
+        c = line.get_color()
+        if c in PlotStyles.colours:
+            index = PlotStyles.colours.index(c)
         return index
     
     def getLineInfo(self, widget, data=None):
@@ -951,16 +965,33 @@ class PlotEditor:
         print info
         return info
     
+    def getData(self, hbox):
+        # Gets the data needed to edit a series from the hbox supplied
+        results = []
+        
+        for child in hbox.get_children():
+            results.append(child.get_text())
+    
+    def updateSeries(self, widget, data=None):
+        # Updates the series given the combobox options
+        
+        lines = self.m_axes.get_lines()
+        
+        if len(lines > 0):
+            print 1
+        else:
+            print("No series to update.")
     
     def update(self):
         self.m_canvas.draw()
         
 
 class PlotStyles:
-    colours = []
+    colours = ["black", "blue", "red", "green", "cyan", "magenta", "yellow"]
     styles = ["-", "--", "-.", ":"]
     markers = ["+", "x", "D", "*", "s", "p", "1", "v", ".", ",", "o", ">", "h"]
     
+    __ccycler = cycle(colours)
     __scycler = cycle(styles)
     __mcycler = cycle(markers)
     
@@ -969,6 +1000,9 @@ class PlotStyles:
     
     def getNextMarker(self):
         return next(self.__mcycler)
+    
+    def getNextColour(self):
+        return next(self.__ccycler)
 
 def checkListOfStrings(stringlist):
     # Checks if all the elements of a list are identical.
