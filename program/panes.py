@@ -752,6 +752,7 @@ class PlotEditor:
         self.m_axes = pane.m_axes
         self.m_canvas = pane.m_canvas
         pane.m_editOpen = True
+        self.m_linesInitialised = False
         
         self.m_window = gtk.Window()
         self.m_window.connect("destroy", self.destroy, )
@@ -763,24 +764,27 @@ class PlotEditor:
         
         padhbox = gtk.HBox()
         box.pack_start(padhbox, padding=self.m_pane.m_consts.m_pad)
-        padvbox = gtk.VBox(homogeneous=False)
-        padhbox.pack_start(padvbox, padding=self.m_pane.m_consts.m_pad)
+        self.m_vbox = gtk.VBox(homogeneous=False)
+        padhbox.pack_start(self.m_vbox, padding=self.m_pane.m_consts.m_pad)
         
         (self.xl_text, xl_but, xl_box) = self.createButtonEntry("Set x label")
-        padvbox.pack_start(xl_box, fill=False, expand=False)
+        self.m_vbox.pack_start(xl_box, fill=False, expand=False)
         xl_but.connect("clicked", self.setLabel, "x")
         (self.yl_text, yl_but, yl_box) = self.createButtonEntry("Set y label")
-        padvbox.pack_start(yl_box, fill=False, expand=False)
+        self.m_vbox.pack_start(yl_box, fill=False, expand=False)
         yl_but.connect("clicked", self.setLabel, "y")
         
         # CREATE X/Y LIMITS SETTERS
         (self.xr_min, self.xr_max, xr_but, xr_box) = self.createLimits("x")
-        padvbox.pack_start(xr_box, fill=False, expand=False)
+        self.m_vbox.pack_start(xr_box, fill=False, expand=False)
         xr_but.connect("clicked", self.setLimits, "x")
         
         (self.yr_min, self.yr_max, yr_but, yr_box) = self.createLimits("y")
-        padvbox.pack_start(yr_box, fill=False, expand=False)
+        self.m_vbox.pack_start(yr_box, fill=False, expand=False)
         yr_but.connect("clicked", self.setLimits, "y")
+        
+        # CREATE INTERFACE FOR DEALING WITH SERIES
+        self.createLineInfo(None, None)
         
         self.m_window.show_all()
     
@@ -842,17 +846,129 @@ class PlotEditor:
         
         self.update()
     
+    def createLineInfo(self, widget, data=None):
+        # Creates information about the lines currently plotted in the axes
+        
+        if self.m_linesInitialised:
+            self.m_frame.remove(self.m_frame.get_children()[0])
+        else:
+            self.m_frame = gtk.Frame() # Parent frame to hold everything
+            self.m_frame.set_label("Series properties")
+            self.m_frame.set_shadow_type(gtk.SHADOW_ETCHED_OUT)
+            self.m_vbox.pack_start(self.m_frame, expand=False, fill=False)
+        
+
+        vbox = gtk.VBox(homogeneous=False)
+        self.m_frame.add(vbox)
+        
+        # Create refresh button
+        hbox = gtk.HBox(homogeneous=False)
+        button = gtk.Button("Refresh series properties")
+        button.connect("clicked", self.createLineInfo, )
+        hbox.pack_end(button, expand=False, fill=False)
+        vbox.pack_start(hbox, padding=self.m_pane.m_consts.m_pad)
+        
+        lines = self.m_axes.get_lines()
+        if len(lines) > 0:
+            for line in self.m_axes.get_lines():
+                hbox = self.createInfo(line)
+                vbox.pack_start(hbox)
+            
+            bhbox = gtk.HBox(homogeneous=False)
+            button = gtk.Button("Update plot")
+            bhbox.pack_end(button, expand=False, fill=False)
+            vbox.pack_start(bhbox, expand=False, fill=False, padding=self.m_pane.m_consts.m_pad)
+        else:
+            label = gtk.Label("No series plotted.")
+            vbox.pack_start(label)
+
+        
+        self.m_linesInitialised = True
+        self.m_window.show_all()
+        
+    def createInfo(self, line):
+        # Turns a line into a gtk hbox of parameters
+        
+        hbox = gtk.HBox()
+        
+        entry = gtk.Entry()
+        entry.set_text(line.get_label())
+        hbox.pack_start(entry, expand=False, fill=False)
+        
+        label = gtk.Label("marker:")
+        hbox.pack_start(label, expand=False, fill=False)
+        combo = gtk.combo_box_new_text()
+        for i in PlotStyles.markers:
+            combo.append_text(i)
+        combo.set_active(self.getMarkerIndex(line))
+        hbox.pack_start(combo, expand=False, fill=False)
+        
+        label = gtk.Label("linestyle:")
+        hbox.pack_start(label, expand=False, fill=False)
+        combo = gtk.combo_box_new_text()
+        for i in PlotStyles.styles:
+            combo.append_text(i)
+        combo.set_active(self.getStyleIndex(line))
+        hbox.pack_start(combo, expand=False, fill=False)
+        
+        label = gtk.Label("colour:")
+        hbox.pack_start(label, expand=False, fill=False)
+        
+        return hbox
+    
+    def getMarkerIndex(self, line):
+        # Gets the index of the line's marker style
+        index = -1
+        m = line.get_marker()
+        if m in PlotStyles.markers:
+            index = PlotStyles.markers.index(m)
+        return index
+    
+    def getStyleIndex(self, line):
+        # Gets the index of the line's style
+        index = -1
+        s = line.get_ls()
+        if s in PlotStyles.styles:
+            index = PlotStyles.styles.index(s)
+        return index
+    
+    def getLineInfo(self, widget, data=None):
+        # Gets a list of critical info of the characteristics of the lines
+        # currently plotted.
+        
+        lines = self.m_axes.get_lines()
+        
+        info = []
+        for l in lines:
+            item = []
+            item.append(l)      # Store reference to line
+            item.append(l.get_label())
+            item.append(l.get_color())
+            item.append(l.get_lw())
+            item.append(l.get_ls())
+            item.append(l.get_marker())
+            info.append(item)
+        print info
+        return info
+    
+    
     def update(self):
         self.m_canvas.draw()
         
 
 class PlotStyles:
+    colours = []
     styles = ["-", "--", "-.", ":"]
+    markers = ["+", "x", "D", "*", "s", "p", "1", "v", ".", ",", "o", ">", "h"]
     
-    cycler = cycle(styles)
+    __scycler = cycle(styles)
+    __mcycler = cycle(markers)
     
     def getNextStyle(self):
-        return next(self.cycler)
+        return next(self.__scycler)
+    
+    def getNextMarker(self):
+        return next(self.__mcycler)
 
 def checkListOfStrings(stringlist):
     # Checks if all the elements of a list are identical.
