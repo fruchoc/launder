@@ -876,6 +876,7 @@ class PlotEditor:
             
             bhbox = gtk.HBox(homogeneous=False)
             button = gtk.Button("Update plot")
+            button.connect("clicked", self.updateSeries, )
             bhbox.pack_end(button, expand=False, fill=False)
             vbox.pack_start(bhbox, expand=False, fill=False, padding=self.m_pane.m_consts.m_pad)
         else:
@@ -893,23 +894,23 @@ class PlotEditor:
         
         entry = gtk.Entry()
         entry.set_text(line.get_label())
-        hbox.pack_start(entry, expand=False, fill=False)
+        hbox.pack_start(entry, expand=False, fill=False, padding=5)
         
         label = gtk.Label("marker:")
         hbox.pack_start(label, expand=False, fill=False)
         combo = gtk.combo_box_new_text()
-        for i in PlotStyles.markers:
+        for i in PlotStyles.nmar:
             combo.append_text(i)
         combo.set_active(self.getMarkerIndex(line))
-        hbox.pack_start(combo, expand=False, fill=False)
+        hbox.pack_start(combo, expand=False, fill=False, padding=5)
         
         label = gtk.Label("linestyle:")
         hbox.pack_start(label, expand=False, fill=False)
         combo = gtk.combo_box_new_text()
-        for i in PlotStyles.styles:
+        for i in PlotStyles.nsty:
             combo.append_text(i)
         combo.set_active(self.getStyleIndex(line))
-        hbox.pack_start(combo, expand=False, fill=False)
+        hbox.pack_start(combo, expand=False, fill=False, padding=5)
         
         label = gtk.Label("colour:")
         hbox.pack_start(label, expand=False, fill=False)
@@ -917,7 +918,7 @@ class PlotEditor:
         for i in PlotStyles.colours:
             combo.append_text(i)
         combo.set_active(self.getColourIndex(line))
-        hbox.pack_start(combo, expand=False, fill=False)
+        hbox.pack_start(combo, expand=False, fill=False, padding=5)
         
         
         return hbox
@@ -926,16 +927,16 @@ class PlotEditor:
         # Gets the index of the line's marker style
         index = -1
         m = line.get_marker()
-        if m in PlotStyles.markers:
-            index = PlotStyles.markers.index(m)
+        if m in PlotStyles.nmar:
+            index = PlotStyles.nmar.index(m)
         return index
     
     def getStyleIndex(self, line):
         # Gets the index of the line's style
         index = -1
         s = line.get_ls()
-        if s in PlotStyles.styles:
-            index = PlotStyles.styles.index(s)
+        if s in PlotStyles.nsty:
+            index = PlotStyles.nsty.index(s)
         return index
     
     def getColourIndex(self, line):
@@ -945,51 +946,55 @@ class PlotEditor:
         if c in PlotStyles.colours:
             index = PlotStyles.colours.index(c)
         return index
-    
-    def getLineInfo(self, widget, data=None):
-        # Gets a list of critical info of the characteristics of the lines
-        # currently plotted.
-        
-        lines = self.m_axes.get_lines()
-        
-        info = []
-        for l in lines:
-            item = []
-            item.append(l)      # Store reference to line
-            item.append(l.get_label())
-            item.append(l.get_color())
-            item.append(l.get_lw())
-            item.append(l.get_ls())
-            item.append(l.get_marker())
-            info.append(item)
-        print info
-        return info
-    
-    def getData(self, hbox):
-        # Gets the data needed to edit a series from the hbox supplied
+
+    def setSeries(self, hbox, line):
+        # Sets the series properties based on the hbox supplied
         results = []
         
-        for child in hbox.get_children():
-            results.append(child.get_text())
+        children = hbox.get_children()
+        
+        # 0 child is entry
+        line.set_label(children[0].get_text())
+        
+        # 2 child is marker
+        line.set_marker(getActiveText(children[2]))
+        
+        # 4 child is linestyle
+        line.set_ls(getActiveText(children[4]))
+        
+        # 6 child is colour
+        line.set_color(getActiveText(children[6]))
     
     def updateSeries(self, widget, data=None):
         # Updates the series given the combobox options
         
         lines = self.m_axes.get_lines()
+        hboxes = self.m_frame.get_children()[0].get_children()
+        hboxes = hboxes[1:(len(hboxes)-2)]
         
-        if len(lines > 0):
-            print 1
+        if len(lines) > 0:
+            for hbox, line in zip(hboxes, lines):
+                self.setSeries(hbox, line)
+                
+        elif len(lines) != len(hboxes):
+            print("Error, series out of sync with editor.")
+            self.createLineInfo(None, None)
         else:
             print("No series to update.")
+            
+        self.update()
     
     def update(self):
         self.m_canvas.draw()
-        
+        self.m_axes.legend(loc=0, prop={'size':10})
 
 class PlotStyles:
-    colours = ["black", "blue", "red", "green", "cyan", "magenta", "yellow"]
+    colours = ["k", "b", "r", "g", "c", "m", "y"]
     styles = ["-", "--", "-.", ":"]
     markers = ["+", "x", "D", "*", "s", "p", "1", "v", ".", ",", "o", ">", "h"]
+    
+    nsty = ["None"] + styles
+    nmar = ["None"] + markers
     
     __ccycler = cycle(colours)
     __scycler = cycle(styles)
@@ -1025,3 +1030,11 @@ def getNextIndex(dictionary):
         return 0
     else:
         return max(dictionary.keys()) + 1
+
+def getActiveText(combobox):
+    # Gets the active text from a combobox
+    model = combobox.get_model()
+    active = combobox.get_active()
+    if active < 0:
+        return None
+    return model[active][0]
