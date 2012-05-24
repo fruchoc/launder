@@ -970,7 +970,7 @@ class PlotEditor:
         
         lines = self.m_axes.get_lines()
         hboxes = self.m_frame.get_children()[0].get_children()
-        hboxes = hboxes[1:(len(hboxes)-2)]
+        hboxes = hboxes[1:(len(hboxes)-1)]
         
         if len(lines) > 0:
             for hbox, line in zip(hboxes, lines):
@@ -987,6 +987,7 @@ class PlotEditor:
     def update(self):
         self.m_canvas.draw()
         self.m_axes.legend(loc=0, prop={'size':10})
+        self.m_canvas.draw()
 
 class PlotStyles:
     colours = ["k", "b", "r", "g", "c", "m", "y"]
