@@ -35,13 +35,17 @@ class PSLCommand(Command):
             for data in parseddata:
                 if data[1] != 0: self.m_parseddata.append(data)
         else:
-            print("Couldn't parse headers")
-            sys.exit(4)
+            print(self.m_consts.tcFAIL + \
+                  "Couldn't parse headers" + \
+                  self.m_consts.tcENDC)
+            sys.exit(1)
         
         procdata = []
         for data in self.m_parseddata:
             if data[1] != 0:
-                print("Found diameter type "+self.m_consts.matchDiam(data[0]))
+                print(self.m_consts.tcOKGREEN + \
+                      "Found diameter type "+self.m_consts.matchDiam(data[0]) + \
+                      self.m_consts.tcENDC)
                 # Append -1 to indicate automatic calculation of bandwidth
                 procdata.append(data + [-1])
         
@@ -49,8 +53,10 @@ class PSLCommand(Command):
         parsed = parser.start(procdata)
         
         if len(parsed) < 1:
-            print("Failure trying to get parsed data.")
-            sys.exit(4)
+            print(self.m_consts.tcFAIL + \
+                  "Failed trying to get parsed data" + \
+                  self.m_consts.tcENDC)
+            sys.exit(1)
         
         self.m_ensembles = []
         for sets in parsed[1:]:
@@ -72,8 +78,10 @@ class PSLCommand(Command):
         parser.head()
         
         if len(self.m_ensembles) != len(self.m_parseddata):
-            print("Segmentation of ensembles and parsed data.")
-            sys.exit(4)
+            print(self.m_consts.tcFAIL + \
+                  "Segmentation of ensembles and parsed data." + \
+                  self.m_consts.tcENDC)
+            sys.exit(1)
         
         parser.write1("output", [])
         
@@ -153,9 +161,12 @@ class TrajectoryCommand(Command):
         # Parse the headers to see what is there!
         parser = MParser.HeaderParser(self.m_fname)
         self.m_headers = parser.getHeaders()
+        
         if self.m_headers == None:
-            print("Couldn't parse headers")
-            sys.exit(4)
+            print(self.m_consts.tcFAIL + \
+                  "Couldn't parse headers" + \
+                  self.m_consts.tcENDC)
+            sys.exit(1)
         
         parser = MParser.TrajectoryParser(self.m_fname)
         self.m_allseries = parser.start(range(0, len(self.m_headers)))
@@ -179,7 +190,8 @@ class TrajectoryCommand(Command):
         parser.write1("output", [])
         
         # Write the file characteristics
-        parser.write1("file", [["name", self.m_fname]], 1, "/")
+        parser.write1("file", [["name", self.m_fname], \
+                               ["time", self.m_allseries[0].getXatX(time, self.m_rtol)]], 1, "/")
         
         # Write the series
         for series in self.m_allseries:

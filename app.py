@@ -31,6 +31,23 @@ class Constants:
     d_pri   = 3
     d_imp   = 4
     
+    # Terminal colours
+    tcHEADER = '\033[95m'
+    tcOKBLUE = '\033[94m'
+    tcOKGREEN = '\033[92m'
+    tcWARNING = '\033[93m'
+    tcFAIL = '\033[91m'
+    tcENDC = '\033[0m'
+
+    def disable(self):
+        self.tcHEADER = ''
+        self.tcOKBLUE = ''
+        self.tcOKGREEN = ''
+        self.tcWARNING = ''
+        self.tcFAIL = ''
+        self.tcENDC = ''
+
+    
     def matchDiam(self, i):
         if i == 0: return "Spherical"
         elif i == 1: return "Mobility"
@@ -84,6 +101,8 @@ def usage():
     print("-i, --input <arg> postprocess specific file")
     print("-x, --xml <arg>   write statistics to XML file")
     print("-p, --psd <arg>   write PSDs from a PSL file (CSV format)")
+    print("-t, --time <arg>  write stats from a trajectory to XML file at time given")
+    print("                  (default end time of simulation)")
 
 if __name__ == "__main__":
     head()
@@ -93,11 +112,13 @@ if __name__ == "__main__":
     guiMode  = True
     xmlOut   = False
     psdOut   = False
+    timeOut  = None
     
     try:
         opts, args = getopt.getopt(sys.argv[1:],\
-                                   "ahd:i:p:x:",\
-                                   ["auto", "help", "input=", "psd=", "xml="]) 
+                                   "ahd:i:p:t:x:",\
+                                   ["auto", "help", "input=", "psd=", "time=",\
+                                     "xml="]) 
     except getopt.GetoptError:
         usage()
         sys.exit(1)
@@ -119,6 +140,14 @@ if __name__ == "__main__":
             guiMode = False
         elif opt in ["-p", "--psd"]:
             psdOut   = str(arg)
+        elif opt in ["-t", "--time"]:
+            try:
+                timeOut  = float(arg)
+            except:
+                print(Constants.tcWARNING + \
+                      "Couldn't get trajectory time, using final time." + 
+                      Constants.tcENDC)
+                timeOut = None
         elif opt in ["-x", "--xml"]:
             xmlOut   = str(arg)
         else:
@@ -135,7 +164,8 @@ if __name__ == "__main__":
         try:
             import program.panes as Panes
         except:
-            print("Couldn't find data model files!")
+            print(Constants.tcFAIL + "Couldn't find data model files!" + \
+                  Constants.tcENDC)
             exitVal = 2
         
         app = Panes.App(Constants())
@@ -147,13 +177,23 @@ if __name__ == "__main__":
         try:
             import program.command as Cmd
         except:
-            print("Couldn't find data model files!")
+            print(Constants.tcFAIL + "Couldn't find data model files!" + \
+                  Constants.tcENDC)
             exitVal = 3
         
         consts = Constants()
         ftype = consts.checkForKnownFile(fname)
         print("Postprocessing file {0}.".format(fname))
         if ftype == consts.f_psl:
+            if (not xmlOut) and (not psdOut):
+                print(consts.tcWARNING + \
+                      "Warning: no output file specified." + \
+                      consts.tcENDC)
+            if timeOut:
+                print(consts.tcWARNING + \
+                      "Warning: time argument has no effect for PSL processing." + \
+                      consts.tcENDC)
+            
             cmd = Cmd.PSLCommand(fname, consts)
             cmd.start()
             
@@ -161,21 +201,35 @@ if __name__ == "__main__":
                 if xmlOut: cmd.writeXML(xmlOut)
                 if psdOut: cmd.writePSDs(psdOut, ",")
             else:
-                print("No ensembles could be loaded.")
+                print(consts.tcFAIL + "No ensembles could be loaded." + \
+                      consts.tcENDC)
                 exitVal = 4
             
         elif ftype == consts.f_chem or \
                 ftype == consts.f_part or \
                 ftype == consts.f_rates:
+            if not xmlOut:
+                print(consts.tcWARNING + \
+                      "Warning: no output file specified." + 
+                      consts.tcENDC)
+            if psdOut:
+                print(consts.tcWARNING + \
+                      "Warning: PSD out argument has no effect in trajectory mode." + \
+                      consts.tcENDC)
+            
             cmd = Cmd.TrajectoryCommand(fname, consts)
             cmd.start()
             
-            if xmlOut: cmd.writeXML(xmlOut)
+            if xmlOut: cmd.writeXML(xmlOut, timeOut)
             
         else:
-            print("Unrecognised file type input.")
+            print(consts.tcFAIL + \
+                  "Unrecognised file type input." + 
+                  consts.tcENDC)
             exitVal = 5
     
-
-print "Goodbye!"
+if exitVal > 0:
+    print(Constants.tcFAIL + "Goodbye!" + Constants.tcENDC)
+else:
+    print(Constants.tcOKGREEN + "Goodbye!" + Constants.tcENDC)
 sys.exit(exitVal)

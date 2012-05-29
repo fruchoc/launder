@@ -19,6 +19,8 @@ class Series:
         self.m_xvalues = xseries
         self.m_yvalues = yseries
         
+        self.m_suppressWarning = False
+        
         if errors: 
             self.m_yerrors = errors
             self.m_lower_ci = []
@@ -46,19 +48,38 @@ class Series:
         for x, y in zip(self.m_xvalues, self.m_yvalues):
             print x, y
     
+    def matchVal(self, val, list, tol=1.0e-6):
+        # Matches a value in a list, returns the index
+        row = 0
+        i = 0
+        for x in list:
+            if x > 0.0:
+                if abs(x-val)/x < tol: row = i
+            i += 1
+        
+        if row == 0 :
+            if self.m_suppressWarning:
+                print("Warning: couldn't find the desired x-value. Using final.")
+            else:
+                self.m_suppressWarning = True
+            row = len(list) - 1
+        
+        return row
+        
+    
+    def getXatX(self, xval=None, tol=1.0e-6):
+        # Gets the actual x value returned through the algorithm
+        if xval == None: return self.m_xvalues[len(self.m_yvalues)-1]
+        else:
+            return self.m_xvalues[self.matchVal(xval, self.m_xvalues, tol)]
+    
     def getYatX(self, xval=None, tol=1.0e-6):
         # Gets the corresponding yvalue for a given xvalue
         # no argument returns the last 
         
         if xval == None: return self.m_yvalues[len(self.m_yvalues)-1]
         else:
-            
-            row = 0
-            i = 0
-            for x in self.m_xvalues:
-                if abs(x-xval)/x < tol: row = i
-                i += 1
-            return self.m_yvalues[row]
+            return self.m_yvalues[self.matchVal(xval, self.m_xvalues, tol)]
 
     def getEatX(self, xval=None, tol=1.0e-6):
         # Gets the corresponding yerror for a given xvalue
@@ -66,13 +87,7 @@ class Series:
         
         if xval == None: return self.m_yerrors[len(self.m_yerrors)-1]
         else:
-            
-            row = 0
-            i = 0
-            for x in self.m_xvalues:
-                if abs(x-xval)/x < tol: row = i
-                i += 1
-            return self.m_yerrors[row]
+            return self.m_yerrors[self.matchVal(xval, self.m_xvalues, tol)]
     
     def getOutputData(self):
         # Gets the data formatted in a convenient way for writing
