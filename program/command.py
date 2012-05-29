@@ -197,11 +197,18 @@ class TrajectoryCommand(Command):
         for series in self.m_allseries:
             val = series.getYatX(time, self.m_rtol)
             err = series.getEatX(time, self.m_rtol)
-            parser.write1("stat", [["name", series.m_name], ["unit", series.m_unit]], 1)
-            parser.write2("mean", val, 2)
-            parser.write2("ci", err, 2)
-            parser.write2("upper", val+err, 2)
-            parser.write2("lower", max(val-err,0.0), 2)
+            
+            unit = series.m_unit
+            mult = 1.0
+            if unit == "m":
+                unit = "nm"
+                mult = 1.0e9
+            
+            parser.write1("stat", [["name", series.m_name], ["unit", unit]], 1)
+            parser.write2("mean", val*mult, 2)
+            parser.write2("ci", err*mult, 2)
+            parser.write2("upper", (val+err)*mult, 2)
+            parser.write2("lower", max(val-err,0.0)*mult, 2)
             parser.write1("/stat", [], 1)
         parser.write1("/output", [])
         
