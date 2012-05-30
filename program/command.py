@@ -128,10 +128,12 @@ class PSLCommand(Command):
         splitted = oname.split(".")
         string = oname
         if len(splitted) > 1:
-            (f, b) = splitted
+            f = splitted[0]
+            b = splitted[1:]
             string = f
             string += "." + ftype.lower()
-            string += "." + b
+            for i in b:
+                string += "." + i
         else:
             string = oname
             string += "." + ftype.lower()
