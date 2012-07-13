@@ -229,15 +229,27 @@ class ControlPane:
         else:
             self.m_auto_files = filelist
     
+    def getCurrentFiles(self, store):
+        # Gets the list of files currently in the treestore
+        files = []
+        for row in store:
+            files.append(row[0])
+        return files
+    
+    
     def appendFilesToTreeView(self, widget, flag):
         # Given a list of filename, add this to the treeview
         filelist = []
+        current  = self.getCurrentFiles(self.m_file_tree_store)
         if flag == "sel":
             filelist = self.m_selected_files
         elif flag == "auto":
             filelist = self.m_auto_files
         for fname in filelist:
-            self.m_file_tree_store.append(None, [fname])
+            if fname in current:
+                print("File {0} already in list.".format(fname))
+            else:
+                self.m_file_tree_store.append(None, [fname])
         
     def loadSelectedFile(self, widget):
         # Loads the selected file on the TreeView
