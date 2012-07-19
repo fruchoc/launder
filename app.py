@@ -12,6 +12,7 @@ class Constants:
     f_rates  = 1
     f_chem   = 2
     f_part   = 3
+    f_grates = 4
     
     # Global padding declarations
     m_pad     = 5
@@ -62,6 +63,7 @@ class Constants:
         elif re.search("-chem.csv", fname): return self.f_chem
         elif re.search("-part-rates.csv", fname): return self.f_rates
         elif re.search("-part.csv", fname): return self.f_part
+        elif re.search("-gp-rates.csv", fname): return self.f_grates
         else: return -1
 
 def autoFind():
@@ -207,7 +209,8 @@ if __name__ == "__main__":
             
         elif ftype == consts.f_chem or \
                 ftype == consts.f_part or \
-                ftype == consts.f_rates:
+                ftype == consts.f_rates or \
+                ftype == consts.f_grates:
             if not xmlOut:
                 print(consts.tcWARNING + \
                       "Warning: no output file specified." + 

@@ -222,7 +222,8 @@ class ControlPane:
         filelist = self.findFiles("*-psl*.csv") + \
             self.findFiles("*-part.csv") + \
             self.findFiles("*-part-rates.csv") + \
-            self.findFiles("*-chem.csv")
+            self.findFiles("*-chem.csv") + \
+            self.findFiles("*-gp-rates.csv")
         
         if len(filelist) < 1:
             print("No files found.")
