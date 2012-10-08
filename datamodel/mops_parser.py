@@ -310,7 +310,7 @@ class PSLHeaderParser(Parser):
             if re.search("Equiv. Sphere Diameter", col): dsph=i
             elif re.search("Mobility Diameter", col): dmob=i
             elif re.search("Collision Diameter", col): dcol=i
-            elif re.search("Primary Diameter", col): dpri=i
+            elif (re.search("Primary Diameter", col) and (not ("Arithmetic" in col or "Geometric" in col))): dpri=i
             elif re.search("primary diameter", col): dpri=i
             i += 1
         
