@@ -1,14 +1,6 @@
 
 import csv
 
-def DSVParser(fname):
-    # Parses a DSV file and returns a dictionary of {"header": [values]}
-    
-    
-    
-
-
-
 class LParser:
     # Generic parsing of DSV files. Generates a dictionary of lists 
     # (columns of DSV files).
@@ -66,7 +58,7 @@ class PSLParser(LParser):
     # For the parsing of PSL files. This gets a list of dictionaries 
     # (rows of PSL files), and their keys.
     def __init__(self, name):
-        super(LParser, self).__init__(fname)
+        super(PSLParser, self).__init__(fname)
         
     def get(self):
         (keys, cstr) = self.__preLoad(fname)
