@@ -22,11 +22,12 @@ if __name__ == "__main__":
     ikey    = ""
     csvout  = ""
     xmlout  = ""
+    gui     = False
     
     try:
         opts, args = getopt.getopt(sys.argv[1:],
-                                   "hi:x:c:k:",
-                                   ["help,input=,xml=,csv=,key="])
+                                   "hi:x:c:k:g",
+                                   ["help,input=,xml=,csv=,key=,gui"])
     except getopt.GetoptError:
         usage()
         sys.exit(1)
@@ -43,6 +44,8 @@ if __name__ == "__main__":
             csvout = str(arg)
         elif opt in ["-x", "--xml"]:
             xmlout = str(arg)
+        elif opt in ["-g", "--gui"]:
+            gui = True
         else:
             print "Unrecognised option " + str(opt) + "."
             sys.exit(1)
@@ -80,5 +83,13 @@ if __name__ == "__main__":
                 p = structure.lparser.XMLWriter(xmlout)
                 p.write_ensemble_stats(e)
                 p.close()
+        
+        if gui:
+            print "Running matplotlib gui."
+            import gui.mpl
+            
+            m = gui.mpl.MPL(iname)
+            
+    
 
 print("Goodbye.")

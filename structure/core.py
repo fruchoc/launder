@@ -81,8 +81,52 @@ class Ensemble:
         s = self.statlist[i]
         x = Trj(s.keys(), s.stats["mesh"])
         y = Trj("Cumulative Density (-)", s.stats["cdf"])
-        return Series("PDF of " + str(x.header), x, y)
+        return Series("CDF of " + str(x.header), x, y)
+
+class MOPSTrajectories(object):
+    # An object which conveniently processes all trajectories in a MOPS -part
+    # style CSV file.
     
+    def __init__(self, fname, data):
+        self.fname = fname
+        # Raw data from the parser
+        self.data  = data["data"]
+        
+        # Get 'edited' keys of the parsed file
+        self.keys = data["keys"] 
+    
+    def times(self):
+        return self.data["Time (s)"]
+    
+    def steps(self):
+        return self.data["Step"]
+    
+    def get_keys(self):
+        # Get a edited list of keys which excludes errors and such.
+        quays = []
+        for k in self.keys:
+            if "Time" in k or "Step" in k or "Err" in k:
+                # Do nothing
+                pass
+            else:
+                quays.append(k)
+        return quays
+    
+    def get_series(self, xkey, ykey):
+        # Gets a series with certain x and y keys.
+        x = Trj(xkey, self.times())
+        y = Trj(ykey, self.data[ykey], self.data["Err in " + str(ykey)])
+        return Series("Series " + str(ykey), x, y)
+    
+    def series_list(self, xkey = "Time (s)"):
+        # Returns a list series representing all x (with xkey) - y series
+        # from parsed file.
+        slist = []
+        for k in self.get_keys():
+            slist.append(get_series(xkey, k))
+        return slist
+
+
 class Trj(object):
     # Trajectories store a header, values and some error measurement
     
@@ -114,6 +158,7 @@ class Series(object):
         s = "[Series object]:\n"
         s += "x trajectory: " + str(self.x.header) + "\n"
         s += "y trajectory: " + str(self.y.header) + "\n"
+        return s
     
     def axes_name(self, ax):
         # Returns the name of the axis

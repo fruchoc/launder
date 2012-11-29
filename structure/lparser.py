@@ -1,20 +1,39 @@
 import csv
 from lxml import etree
 
+def examine_filetype(fname):
+    # A function which will examine the file structure and return a guess at
+    # what type of file it is.
+    p = LParser(fname)
+    (keys, cstr) = p._pre_load()
+    
+    # Convert to lower case to be sure
+    lkeys = []
+    for k in keys:
+        lkeys.append(k.lower())
+    
+    rstr = ""
+    for k in lkeys:
+        # If we find Weight and Stat Weight it's probably a PSL file
+        if "stat. weight" in k: rstr = "psl"
+        # If we find an 'Err' key it's probably a -part type file
+        if "err" in k: rstr = "part"
+    return rstr
+
 class LParser(object):
     # Generic parsing of DSV files. Generates a dictionary of lists 
     # (columns of DSV files).
     def __init__(self, fname):
         self.fname = fname
     
-    def __check(self, fname):
+    def _check(self):
         # Checks the dialect and whether the file has headers.
         s = csv.Sniffer()
         
         try:
-            f = open(fname, "rb")
+            f = open(self.fname, "rb")
         except IOError:
-            print "Couldn't open", fname
+            print "Couldn't open", self.fname
             return None
         
         # Use three lines of file for context
@@ -26,13 +45,13 @@ class LParser(object):
         
         return {"dialect": d, "has_headers": hh}
     
-    def _pre_load(self, fname):
+    def _pre_load(self):
         # First get any properties of the DSV file
-        p = self.__check(self.fname)
+        p = self._check()
         
         # Create dictionaries to hold the fields
         r = {}
-        cstr = csv.DictReader(open(fname, 'r'), 
+        cstr = csv.DictReader(open(self.fname, 'r'), 
                 delimiter=p["dialect"].delimiter)
         
         # Generate the keys
@@ -46,13 +65,58 @@ class LParser(object):
         return (keys, cstr)
     
     def get(self):
-        (keys, cstr) = self._pre_load(fname)
+        (keys, cstr) = self._pre_load()
+        
+        # Initialise keys dictionary
+        r = {}
+        for k in keys:
+            r[k] = []
         
         # Load the data from the lines
-        r = {}
         for line in cstr:
             for k in keys:
                 r[k].append(float(line[k]))
+        
+        return {"data": r, "keys": keys}
+
+class PartParser(LParser):
+    # Used for parsing MOPS trajectories, e.g. a -part.csv file. Need to use 
+    # this class to properly load in the Err columns of the part file.
+    def __init__(self, name):
+        super(PartParser, self).__init__(name)
+    
+    def __gen_dictionary(self, headers):
+        # Generates a new list of headers to be distinct keys in the data dict.
+        # Remove: Err keys
+        # Add: a Err key for each other distinct header.
+        keys = []
+        for h in headers:
+            if h != "Err":
+                # Order is important!
+                keys.append(h)
+                if not ("Step" in h) and not ("Time" in h):
+                    # Add an error key too
+                    keys.append("Err in " + str(h))
+        return keys
+    
+    def get(self):
+        # Can't use the usual interface due to the annoying presence of the 
+        # Err columns.
+        p = self._check()
+        cstr = csv.reader(open(self.fname, "rb"), dialect=p["dialect"])
+        
+        keys = self.__gen_dictionary(cstr.next())
+        
+        # Load data now
+        r = {}
+        for k in keys:
+            r[k] = []
+        
+        # Loop over DSV file lines
+        for line in cstr:
+            # Loop over DSV file columns (assume same order as in keys)
+            for i in range(0, len(keys)):
+                r[keys[i]].append(float(line[i]))
         
         return {"data": r, "keys": keys}
 
@@ -63,7 +127,7 @@ class PSLParser(LParser):
         super(PSLParser, self).__init__(name)
         
     def get(self):
-        (keys, cstr) = self._pre_load(self.fname)
+        (keys, cstr) = self._pre_load()
         # Remove the "Stat weight (-)" entry to avoid confusion later
         si = 0
         for k in keys:
