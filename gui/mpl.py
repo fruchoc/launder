@@ -37,7 +37,9 @@ class MPL:
             self.plot_series(self.part())
         else:
             # It's probably just a normal CSV file
-            print "Unsupported."
+            print "Generic DSV file selected?"
+            self.loopfn = self.generic
+            self.plot_series(self.generic())
     
     def __get_answer(self, minval, maxval):
         # Returns an answer
@@ -98,6 +100,23 @@ class MPL:
         # Plot something?
         ki = keys[self.__get_choice("Plot which parameter?", keys)]
         return mtrj.get_series("Time (s)", ki)
+    
+    def generic(self):
+        # Plot a generic DSV file.
+        p = structure.lparser.LParser(self.fname)
+        dat = p.get()
+        
+        keys = dat["keys"]
+        vals = dat["data"]
+        
+        xkey = keys[self.__get_choice("Which for x axis?", keys)]
+        ykey = keys[self.__get_choice("Which for y axis?", keys)]
+        if xkey == ykey:
+            print "Warning: same key selected."
+        
+        x = structure.core.Trj(xkey, vals[xkey])
+        y = structure.core.Trj(ykey, vals[ykey])
+        return structure.core.Series(ykey + " vs " + xkey, x, y)
     
     def plot_series(self, series):
         # Plot a series object
