@@ -1,5 +1,4 @@
 import csv
-from lxml import etree
 
 def examine_filetype(fname):
     # A function which will examine the file structure and return a guess at
@@ -12,7 +11,7 @@ def examine_filetype(fname):
     for k in keys:
         lkeys.append(k.lower())
     
-    rstr = ""
+    rstr = "other"
     for k in lkeys:
         # If we find Weight and Stat Weight it's probably a PSL file
         if "stat. weight" in k: rstr = "psl"
@@ -184,6 +183,11 @@ class XMLWriter:
         self.fname      = fname
         self.fstr       = open(self.fname, "wb")
         self.fstr.write('<?xml version="1.0"?>\n')
+        
+        try:
+            from lxml import etree
+        except:
+            print("lxml not available.")
         
         # Start an lxml root
         self.root = etree.Element("output")
