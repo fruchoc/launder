@@ -33,8 +33,13 @@ class MPL:
         elif s == "part":
             # Is it a MOPS -part etc CSV file?
             print "MOPS trajectory output file found."
-            self.loopfn = self.part
-            self.plot_series(self.part())
+            try:
+                self.loopfn = self.part
+                self.plot_series(self.part())
+            except:
+                print "Failed using normal MOPS file parser, using generic."
+                self.loopfn = self.generic
+                self.plot_series(self.generic())
         else:
             # It's probably just a normal CSV file
             print "Generic DSV file selected?"

@@ -131,7 +131,7 @@ class PSLParser(LParser):
         # Remove the "Stat weight (-)" entry to avoid confusion later
         si = 0
         for k in keys:
-            if "Stat Weight" in k: si = keys.index(k)
+            if "Stat. Weight" in k: si = keys.index(k)
         if si: del keys[si]
         
         # Load the data from the lines:
@@ -141,6 +141,10 @@ class PSLParser(LParser):
             for k in keys:
                     d[k] = float(line[k])
             r.append(d)
+        
+        # Check that data has actually been found
+        if len(r) < 1:
+            raise ValueError("No data could be loaded from the PSL.")
         
         return {"data": r, "keys": keys} 
 
