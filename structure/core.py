@@ -150,12 +150,15 @@ class Series(object):
     def __init__(self, name, x, y):
         self.name = name
         
+        # Can also store the filename of a Series
+        self.filename = ""
+        
         # x and y are Trj objects.
         self.x = x
         self.y = y
     
     def __str__(self):
-        s = "[Series object]:\n"
+        s = "[Series object]: " + str(self.name) + "\n"
         s += "x trajectory: " + str(self.x.header) + "\n"
         s += "y trajectory: " + str(self.y.header) + "\n"
         return s
@@ -194,4 +197,11 @@ class Series(object):
         # Return the y value for a given x value
         return self.y.values[self.__match(val, self.x.values)]
     
+    def set_file(self, fname):
+        # Sets the filename of the object
+        self.filename = fname
     
+    def get_data_list(self):
+        # Gets a list of data for convenient display in a Liststore in the GUI
+        return [self, self.name, self.axes_name("x"), self.axes_name("y"), 
+                self.filename]
