@@ -125,16 +125,20 @@ class MFiles(MWindow):
         cln.connect("clicked", self.clean, )
         tools.insert(cln, 3)
         
+        # Add the file loading buttons
+        load = gtk.ToolButton(gtk.STOCK_CONVERT)
+        load.connect("clicked", self.load_selected_file, )
+        load.set_tooltip_text("Load selected file")
+        tools.insert(load, 4)
+        
+        # A separator
+        tools.insert(gtk.SeparatorToolItem(), 5)
+        
         # The quit button
         quit = gtk.ToolButton(gtk.STOCK_QUIT)
         quit.set_tooltip_text("Quit " + self.name)
         quit.connect("clicked", gtk.main_quit)
-        tools.insert(quit, 4)
-        
-        # Add the file loading buttons
-        but = gtk.Button("Load file")
-        but.connect("clicked", self.load_selected_file, )
-        hb.pack_end(but, expand=False, fill=False, padding=2)
+        tools.insert(quit, 6)
         
         # Now set up the Tree Store.
         self.store = gtk.TreeStore(str)
@@ -344,11 +348,59 @@ class MFileLoader(MWindow):
         # Ask for some size
         self.win.set_size_request(300, 180)
         
+        # Initialise some variables to use alter
+        self.xcombo = None
+        self.ycombo = None
+        self.entry  = None
+        self.store  = None
+        self.view   = None
+        self.has_errors = False
+        
         self.fname = fname
         ftype = structure.lparser.examine_filetype(fname)
         self.ffunc = self.other
         if ftype == "psl": self.ffunc = self.psl
         elif ftype == "part": self.ffunc = self.part
+    
+    def __non_zero_errors(self, data):
+        # Investigates a dictionary of data to see if any of the error
+        # series are non-zero.
+        ans = False
+        
+        for k in data.keys():
+            if "Err" in k:
+                for i in data[k]:
+                    if i > 0.0: ans = True
+        return ans
+    
+    def __filter_mops_dictionary(self, keys):
+        # Filters a dictionary with error entries
+        klist = []
+        for k in keys:
+            if "Step" in k or k == "Time (s)" or "Err" in k:
+                # Do nothing
+                pass
+            else:
+                klist.append(k)
+        return klist
+    
+    def __make_combo_boxes(self, vbox, keys):
+        # Put two combo boxes into a vbox with keys given by the keys argument
+        
+        hbx = gtk.HBox(homogeneous = False)
+        vbox.pack_start(hbx, expand=False, fill=False)
+        hbx.pack_start(gtk.Label("X-axis column:"), expand=False, 
+                        padding=10)
+        self.xcombo = self.__make_combo(keys)
+        hbx.pack_start(self.xcombo, expand=False)
+        
+        hby = gtk.HBox(homogeneous = False)
+        vbox.pack_start(hby, expand=False, fill=False)
+        hby.pack_start(gtk.Label("Y-axis column:"), expand=False,
+                        padding=10)
+        self.ycombo = self.__make_combo(keys)
+        hby.pack_start(self.ycombo, expand=False)
+        
     
     def make(self):
         # Makes the file loader.
@@ -360,7 +412,74 @@ class MFileLoader(MWindow):
     
     def part(self):
         # Loads a MOPS -part.csv style file.
-        pass
+        
+        # Create parser
+        data_dict = {}
+        try:
+            p = structure.lparser.PartParser(self.fname)
+            data_dict = p.get()
+            del p
+        except:
+            print("Failed using the standard MOPS parser.")
+            self.other()
+            return
+        
+        # Now get the useful data
+        self.data = data_dict["data"]
+        self.keys = data_dict["keys"]
+        
+        # Are there non-zero errors
+        self.has_errors = self.__non_zero_errors(self.data)
+        
+        # Create a VBox.
+        vb = gtk.VBox(homogeneous=False)
+        self.win.add(vb)
+        vb.pack_start(gtk.Label("MOPS CSV file found."), expand=False,
+                      fill=False, padding=10)
+        
+        # Should the series be plotted with Steps or Time?
+        hb = gtk.HBox(homogeneous=False)
+        vb.pack_start(hb, expand=False, fill=False)
+        hb.pack_start(gtk.Label("Plot against steps or time?"))
+        
+        self.radio_time = gtk.RadioButton(None, "Time")
+        hb.pack_start(self.radio_time)
+        
+        self.radio_step = gtk.RadioButton(self.radio_time, "Steps")
+        hb.pack_start(self.radio_step)
+        self.radio_time.set_active(True)
+        
+        # Create a list store
+        self.store = gtk.ListStore(str)
+        self.view  = gtk.TreeView(self.store)
+        self.view.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
+        
+        # Create a scroller
+        scroller = gtk.ScrolledWindow()
+        scroller.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
+        scroller.add_with_viewport(self.view)
+        vb.pack_start(scroller, padding=5)
+        
+        cell     = cell = gtk.CellRendererText()
+        col1     = gtk.TreeViewColumn("Available series")
+        col1.pack_start(cell, True)
+        col1.add_attribute(cell, 'text', 0)
+        self.view.append_column(col1)
+        
+        # Add the entries
+        for k in self.__filter_mops_dictionary(self.keys):
+            self.store.append([k])
+        
+        # And finally some buttons
+        hb = gtk.HBox(homogeneous=False)
+        vb.pack_start(hb, padding=5, expand=False, fill=False)
+        but = gtk.Button("Add selection")
+        but.connect("clicked", self.add_series, )
+        hb.pack_start(but, expand=False, fill=False, padding=5)
+        
+        but = gtk.Button("Add all")
+        but.connect("clicked", self.add_all_series, )
+        hb.pack_start(but, expand=False, fill=False, padding=5)
     
     def other(self):
         # Loads a generic DSV file
@@ -380,21 +499,8 @@ class MFileLoader(MWindow):
         vb.pack_start(gtk.Label("Generic DSV file found."), expand=False,
                       padding=10)
         
-        # X axis chooser
-        hbx = gtk.HBox(homogeneous = False)
-        vb.pack_start(hbx, expand=False, fill=False)
-        hbx.pack_start(gtk.Label("Y-axis column:"), expand=False, 
-                        padding=10)
-        self.xcombo = self.__make_combo(self.keys)
-        hbx.pack_start(self.xcombo, expand=False)
-        
-        # Y axis chooser
-        hby = gtk.HBox(homogeneous = False)
-        vb.pack_start(hby, expand=False, fill=False)
-        hby.pack_start(gtk.Label("Y-axis column:"), expand=False,
-                        padding=10)
-        self.ycombo = self.__make_combo(self.keys)
-        hby.pack_start(self.ycombo, expand=False)
+        # Create combo boxes
+        self.__make_combo_boxes(vb, self.keys)
         
         # Name for series field
         hbn = gtk.HBox(homogeneous = False)
@@ -441,11 +547,24 @@ class MFileLoader(MWindow):
         # Adds a series object to the Series Browser window
         self.win_series.add_series(series, self.fname)
     
+    def __get_selections(self):
+        # Gets the selection of a store
+        sel = self.view.get_selection()
+        paths = []
+        if sel.count_selected_rows() > 0:
+            (model, paths) = sel.get_selected_rows()
+        return paths
+    
+    def __get_y_trj(self, key):
+        
+        ty = structure.core.Trj(key, self.data[key])
+        if self.has_errors:
+            ty.add_errors(self.data["Err in " + key])
+        return ty
+    
     def add_series(self, callback = None):
         # Adds a series
         if self.xcombo and self.ycombo and self.entry:
-            print "Adding a generic series."
-            
             # Generic, let's find the choices from the ComboBox
             xkey = self.__get_combo(self.xcombo)
             ykey = self.__get_combo(self.ycombo)
@@ -456,6 +575,22 @@ class MFileLoader(MWindow):
             ty = structure.core.Trj(ykey, self.data[ykey])
             s = structure.core.Series(name, tx, ty)
             self.__add_to_window(s)
+        
+        if self.store:
+            # Get x key first
+            if self.radio_time.get_active():
+                xkey = "Time (s)"
+            else:
+                xkey = "Step"
+            tx = structure.core.Trj(xkey, self.data[xkey])
+            
+            # Loop over selections
+            for path in self.__get_selections():
+                 key = self.store.get_value(self.store.get_iter(path), 0)
+                 ty = self.__get_y_trj(key)
+
+                 s = structure.core.Series(key + " vs " + xkey, tx, ty)
+                 self.__add_to_window(s)
     
     def add_all_series(self, callback = None):
         # For a specified x series, add all the y series.
@@ -473,6 +608,21 @@ class MFileLoader(MWindow):
             for k in ylist:
                 ty = structure.core.Trj(k, self.data[k])
                 s = structure.core.Series(k + " vs " + xkey, tx, ty)
+                self.__add_to_window(s)
+        
+        if self.store:
+            # Get x key first
+            if self.radio_time.get_active():
+                xkey = "Time (s)"
+            else:
+                xkey = "Step"
+            tx = structure.core.Trj(xkey, self.data[xkey])
+            
+            for row in self.store:
+                key = row[0]
+                ty = self.__get_y_trj(key)
+                
+                s = structure.core.Series(key + " vs " + xkey, tx, ty)
                 self.__add_to_window(s)
         
         # Kill window as the user is probably finished with it.
@@ -500,7 +650,7 @@ class MSeriesBrowser(MWindow):
         # object is not displayed.
         col = gtk.TreeViewColumn(label, cell, text=id+1)
         col.set_resizable(True)
-        col.set_sort_column_id(id)
+        col.set_sort_column_id(id+1)
         return col
     
     def __get_selections(self):
@@ -546,7 +696,7 @@ class MSeriesBrowser(MWindow):
         tools.insert(gtk.SeparatorToolItem(), 3)
         
         # NOW ADD SOME PLOTTING BUTTONS
-        new = gtk.ToolButton(gtk.STOCK_NEW)
+        new = gtk.ToolButton(gtk.STOCK_PAGE_SETUP)
         new.set_tooltip_text("Generate new plot of series")
         new.set_label("New plot")
         tools.insert(new, 4)

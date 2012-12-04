@@ -144,6 +144,23 @@ class Trj(object):
         s += "with " + str(len(self.values)) + "values "
         s += "and " + str(len(self.values)) + "errors.\n"
         return s
+    
+    def add_errors(self, err):
+        self.err = err
+    
+    def ub(self):
+        # Gets the upper bound
+        l = []
+        for v, e in zip(self.values, self.err):
+            l.append(v + e)
+        return l
+    
+    def lb(self):
+        # Gets the upper bound
+        l = []
+        for v, e in zip(self.values, self.err):
+            l.append(min(v - e), 0.0)
+        return l
 
 class Series(object):
     # Holds two trajectories. Good for plotting x-y graphs.

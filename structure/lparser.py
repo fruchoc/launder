@@ -93,7 +93,7 @@ class PartParser(LParser):
             if h != "Err":
                 # Order is important!
                 keys.append(h)
-                if not ("Step" in h) and not ("Time" in h):
+                if not ("Step" in h) and not (h == "Time (s)"):
                     # Add an error key too
                     keys.append("Err in " + str(h))
         return keys
