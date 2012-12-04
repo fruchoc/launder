@@ -5,7 +5,7 @@ import getopt
 
 def head():
     print "mview: Copyright William Menz (wjm34) 2012"
-    print "a program for viewing the results of MOPS calculations rapidly.\n"
+    print "A program for viewing the results of MOPS calculations rapidly."
 
 def usage():
     print "Usage:"
@@ -90,13 +90,13 @@ if __name__ == "__main__":
                 
         
         if gui:
-            print "Running matplotlib gui."
+            print "Running matplotlib GUI."
             import gui.mpl
             
             m = gui.mpl.MPL(iname)
     else:
         # iname not specified: load GTK gui by default.
-        print "Loading GTK gui."
+        print "Loading GTK GUI."
         import gui.mgtk
         
         m = gui.mgtk.MView()

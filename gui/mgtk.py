@@ -1,5 +1,6 @@
 import glob
 import os
+from itertools import cycle
 
 # Imports from the other program libraries
 import structure.lparser
@@ -11,12 +12,12 @@ try:
     pygtk.require("2.0")
     import gobject
 except:
-    print("Couldn't find correct version of pygtk.")
+    raise SystemExit("Couldn't find correct version of pygtk.")
 
 try:
     import gtk
 except:
-    print("Couldn't find correct version of gtk.")
+    raise SystemExit("Couldn't find correct version of gtk.")
 
 try:
     from matplotlib.figure import Figure
@@ -25,7 +26,8 @@ try:
     from matplotlib.backends.backend_gtkagg \
         import NavigationToolbar2GTKAgg as NavToolbar
 except:
-    print("Couldn't find matplotlib dependencies.")
+    raise SystemExit("Couldn't find matplotlib dependencies.")
+
 
 class MView(object):
     # Master class which administers all windows.
@@ -641,6 +643,9 @@ class MSeriesBrowser(MWindow):
         
         self.win.set_size_request(500, 300)
         
+        # The figure dictionary stores references to all available figures
+        self.fstore  = None
+        self.findex  = 1
     
     def __make_col(self, label, id):
         # Adds a column to the list view
@@ -662,6 +667,11 @@ class MSeriesBrowser(MWindow):
             (model, paths) = sel.get_selected_rows()
         return paths
     
+    def __update_figure_store(self, fig=None):
+        # Updates the figure store with the list of figures
+        if fig:
+            self.fstore.append([fig, fig.figname])
+    
     def make(self):
         # Makes the window
         
@@ -670,9 +680,11 @@ class MSeriesBrowser(MWindow):
         self.win.add(vb)
         
         # Create a toolbar.
+        hb = gtk.HBox(homogeneous=False)
+        vb.pack_start(hb, expand=False, fill=False)
         tools = gtk.Toolbar()
         tools.set_style(gtk.TOOLBAR_ICONS)
-        vb.pack_start(tools, expand=False, fill=False)
+        hb.pack_start(tools, fill=True)
         
         # Create an export button
         save = gtk.ToolButton(gtk.STOCK_SAVE)
@@ -695,11 +707,27 @@ class MSeriesBrowser(MWindow):
         # Insert a separator
         tools.insert(gtk.SeparatorToolItem(), 3)
         
-        # NOW ADD SOME PLOTTING BUTTONS
-        new = gtk.ToolButton(gtk.STOCK_PAGE_SETUP)
-        new.set_tooltip_text("Generate new plot of series")
-        new.set_label("New plot")
-        tools.insert(new, 4)
+        # Create plot selector
+        self.fstore = gtk.ListStore(gobject.TYPE_PYOBJECT, str)
+        self.fcombo = gtk.ComboBox(self.fstore)
+        hb.pack_end(self.fcombo, expand=False, fill=False)
+        
+        cell = gtk.CellRendererText()
+        self.fcombo.pack_start(cell, True)
+        self.fcombo.add_attribute(cell, "text", 1)
+        
+        but = gtk.Button("Add to")
+        but.connect("clicked", self.add_to_plot, )
+        hb.pack_end(but, expand=False, fill=False, padding=4)
+        
+        # A plot selector
+        hb.pack_end(gtk.Label(" or "), padding=4, expand=False, fill=False)
+        
+        # Create plot button
+        but = gtk.Button("New plot")
+        but.connect("clicked", self.create_new_plot, )
+        hb.pack_end(but, expand=False, fill=False)
+        
         
         # Create a list store to display available series
         # Put a structure.core.Series object as the first column.
@@ -772,4 +800,179 @@ class MSeriesBrowser(MWindow):
                 p = structure.lparser.DSVWriter(f)
                 p.write_series(s)
                 p.close()
-                
+    
+    def add_to_plot(self, callback=None):
+        # Adds the selection to a plot
+        
+        # First get the desired figure (stored in col 0 of the fstore)
+        index = self.fcombo.get_active()
+        fig = self.fstore[index][0]
+        
+        # Now get selections
+        for path in self.__get_selections():
+            s = self.store.get_value(self.store.get_iter(path), 0)
+            fig.add_series(s)
+    
+    def create_new_plot(self, callback=None):
+        # Creates a new plot form the selected series
+        fig = MFigure(self, self.findex)
+        fig.make()
+        
+        # Loop over paths
+        for path in self.__get_selections():
+            s = self.store.get_value(self.store.get_iter(path), 0)
+            fig.add_series(s)
+        fig.show()
+        
+        # Store reference in dictionary
+        self.__update_figure_store(fig)
+        self.findex += 1
+
+class MFigure(MWindow):
+    # The MFigure class is a GTK shell around a matplotlib canvas.
+    
+    def __init__(self, win_series, index):
+        # Call parent constructor
+        super(MFigure, self).__init__()
+        self.figname = "Figure " + str(index)
+        
+        # Store a reference to the parent window
+        self.win_series = win_series
+        
+        # The index is a key assigned to this particular figure.
+        self.index = index
+        
+        # Set up some other figure attributes
+        self._set_win_title(self.win, "Figure " + str(self.index))
+        self.win.set_size_request(650, 400)
+        
+        # is the plot editor open?
+        self.editor = False
+    
+    def __init_axes(self):
+        # Cleans the axes.
+        self.fig.clear()
+        self.axes = self.fig.add_subplot(111)
+        if self.axes.lines: self.axes.legend(loc=0)
+        
+        # Toggle log axes
+        self.__toggle_log(self.logx, "x")
+        self.__toggle_log(self.logy, "y")
+        
+        # Automatically scale the axes
+        self.axes.set_autoscale_on(True)
+        
+        # Draw the canvas
+        self.canvas.draw()
+    
+    def __toggle_log(self, widget, callback=None):
+        # Toggles a log axis on/off.
+        if widget.get_active():
+            if callback == "x": self.axes.set_xscale("log")
+            elif callback == "y": self.axes.set_yscale("log")
+        else:
+            if callback == "x": self.axes.set_xscale("linear")
+            elif callback == "y": self.axes.set_yscale("linear")
+        self.canvas.draw()
+    
+    def make(self):
+        
+        # Create a vbox to hold everything
+        vb = gtk.VBox(homogeneous=False)
+        self.win.add(vb)
+        
+        # Create the MPL figure
+        self.fig        = Figure()
+        self.canvas     = FigureCanvas(self.fig)
+        
+        # Create a toolbar for the figure
+        self.toolbar    = NavToolbar(self.canvas, self.win)
+        vb.pack_start(self.toolbar, expand=False)
+        vb.pack_start(self.canvas)
+        
+        # Now add some buttons...
+        hb = gtk.HBox(homogeneous=False)
+        vb.pack_start(hb, expand=False, fill=False)
+        but = gtk.Button("Edit plot")
+        but.connect("clicked", self.edit, )
+        hb.pack_start(but, expand=False, padding=4)
+        
+        # Log checkboxes
+        self.logx   = gtk.CheckButton("LogX?")
+        self.logx.connect("toggled", self.__toggle_log, "x")
+        hb.pack_start(self.logx, expand=False, padding=4)
+        self.logy   = gtk.CheckButton("LogY?")
+        self.logy.connect("toggled", self.__toggle_log, "y")
+        hb.pack_start(self.logy, expand=False, padding=4)
+        
+        # Reset
+        but = gtk.Button("Reset")
+        but.connect("clicked", self.reset, )
+        hb.pack_end(but, expand=False, padding=4)
+        
+        # Now we can initialise the axes
+        self.__init_axes()
+    
+    def edit(self, callback = None):
+        # Edit the plot with a ploteditor
+        if self.editor:
+            editor = PlotEditor(self)
+            editor.make()
+            editor.show()
+            self.editor = True
+        else:
+            # Do nothing
+            pass
+    
+    def add_series(self, series):
+        # Adds one or many series
+        line = self.axes.plot(series.axes_values("x"), series.axes_values("y"),
+                              label=series.name)
+        self.axes.set_xlabel(series.axes_name("x"))
+        self.axes.set_ylabel(series.axes_name("y"))
+        self.canvas.draw()
+    
+    def reset(self, callback=None):
+        # Resets the plot
+        self.fig.clear()
+        self.__init_axes()
+
+class PlotEditor(MWindow):
+    # A class which permits editing of matplotlib windows
+    
+    def __init__(self, parent):
+        super(PlotEditor, self).__init__()
+        self._set_win_title(self.win, "Edit " + parent.figname)
+        self.win.set_size_request(400, 300)
+        
+        # Store reference to parent window
+        self.win_parent = parent
+        
+        # Also store axes for easy access
+        self.axes       = self.win_parent.axes
+    
+    def destroy(self, callback=None):
+        self.win_parent.editor = False
+        super(PlotEditor, self).destroy()
+
+class PlotStyles:
+    # A container class to hold useful information for matplotlib plots.
+    colours = ["b", "r", "g", "c", "m", "y", "k"]
+    styles = ["-", "--", "-.", ":"]
+    markers = ["+", "x", "D", "*", "s", "p", "1", "v", ".", ",", "o", ">", "h"]
+    
+    nsty = ["None"] + styles
+    nmar = ["None"] + markers
+    
+    __ccycler = cycle(colours)
+    __scycler = cycle(styles)
+    __mcycler = cycle(markers)
+    
+    def next_style(self):
+        return next(self.__scycler)
+    
+    def next_marker(self):
+        return next(self.__mcycler)
+    
+    def next_colour(self):
+        return next(self.__ccycler)
