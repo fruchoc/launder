@@ -55,7 +55,7 @@ class MWindow(object):
         self.win.connect("destroy", self.destroy, )
         
         # Ask for some size
-        self.win.set_size_request(500, 350)
+        self.win.set_default_size(500, 350)
     
     def destroy(self, callback = None):
         self.win.destroy()
@@ -348,7 +348,7 @@ class MFileLoader(MWindow):
         self.win_series = win_series
         
         # Ask for some size
-        self.win.set_size_request(300, 180)
+        self.win.set_default_size(250, 100)
         
         # Initialise some variables to use alter
         self.xcombo = None
@@ -460,6 +460,7 @@ class MFileLoader(MWindow):
         scroller = gtk.ScrolledWindow()
         scroller.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
         scroller.add_with_viewport(self.view)
+        scroller.set_size_request(250,300)
         vb.pack_start(scroller, padding=5)
         
         cell     = cell = gtk.CellRendererText()
@@ -536,6 +537,7 @@ class MFileLoader(MWindow):
         cell = gtk.CellRendererText()
         combo.pack_start(cell, True)
         combo.add_attribute(cell, "text", 0)
+        combo.set_active(0)
         return combo
 
     def __get_combo(self, box):
@@ -672,6 +674,15 @@ class MSeriesBrowser(MWindow):
         if fig:
             self.fstore.append([fig, fig.figname])
     
+    def __find_figure_iter(self, fig):
+        # Finds a figure path given a figure reference
+        for row in self.fstore:
+            if val == row[0]:
+                return row.iter
+        
+        # Just return nothing if we get here
+        return None
+    
     def make(self):
         # Makes the window
         
@@ -806,7 +817,10 @@ class MSeriesBrowser(MWindow):
         
         # First get the desired figure (stored in col 0 of the fstore)
         index = self.fcombo.get_active()
-        fig = self.fstore[index][0]
+        try:
+            fig = self.fstore[index][0]
+        except IndexError:
+            print "No figure selected or available!"
         
         # Now get selections
         for path in self.__get_selections():
@@ -827,9 +841,18 @@ class MSeriesBrowser(MWindow):
         # Store reference in dictionary
         self.__update_figure_store(fig)
         self.findex += 1
+    
+    def remove_figure(self, fig):
+        # Removes a figure with fig_name from the store
+        self.fstore.remove(self.__find_figure_iter(fig))
 
 class MFigure(MWindow):
     # The MFigure class is a GTK shell around a matplotlib canvas.
+    
+    def destroy(self, callback=None):
+        # Overload of parent destroy function.
+        self.win_series.remove_figure(self)
+        super(MFigure, self).destroy()
     
     def __init__(self, win_series, index):
         # Call parent constructor
@@ -924,13 +947,18 @@ class MFigure(MWindow):
             # Do nothing
             pass
     
+    def update(self):
+        # Updates the plot
+        self.axes.legend(loc=0)
+        self.canvas.draw()
+    
     def add_series(self, series):
         # Adds one or many series
         line = self.axes.plot(series.axes_values("x"), series.axes_values("y"),
                               label=series.name)
         self.axes.set_xlabel(series.axes_name("x"))
         self.axes.set_ylabel(series.axes_name("y"))
-        self.canvas.draw()
+        self.update()
     
     def reset(self, callback=None):
         # Resets the plot
